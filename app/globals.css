@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0f;
+  --foreground: #f4f4f6;
+  --muted: #9a9aa8;
+  --accent: #7c5cff;
+  --accent-foreground: #ffffff;
+  --border: #23232e;
+  --surface: #121218;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.section-container {
+  @apply mx-auto w-full max-w-content px-6 sm:px-8 lg:px-12;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #7c5cff, #ff5ca7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
