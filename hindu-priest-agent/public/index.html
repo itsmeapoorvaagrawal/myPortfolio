@@ -9,9 +9,11 @@
   @media (prefers-color-scheme: dark) { :root { --bg:#1d140c; --card:#2a1d12; --ink:#f7e6cf; --muted:#c1a688; --line:#4a3320; } }
   * { box-sizing:border-box; }
   body { margin:0; font-family:"Noto Sans Devanagari","Mangal",system-ui,sans-serif; background:var(--bg); color:var(--ink); height:100dvh; display:flex; flex-direction:column; }
-  header { padding:12px 16px; text-align:center; border-bottom:1px solid var(--line); background:linear-gradient(var(--card),var(--bg)); }
+  header { padding:10px 16px; text-align:center; border-bottom:1px solid var(--line); background:linear-gradient(var(--card),var(--bg)); }
   header h1 { margin:0; font-size:1.3rem; color:var(--deep); }
   header small { color:var(--muted); }
+  #voicebar { display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:6px; font-size:.82rem; color:var(--muted); }
+  #voicebar select, #voicebar input { font:inherit; max-width:230px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:2px 6px; }
   main { flex:1; overflow-y:auto; padding:12px 16px; max-width:820px; width:100%; margin:0 auto; }
   .msg { margin:8px 0; padding:10px 14px; border-radius:14px; max-width:88%; line-height:1.6; white-space:pre-wrap; }
   .acharya { background:var(--card); border:1px solid var(--line); }
@@ -28,16 +30,46 @@
   #bar i { display:block; height:100%; width:0; background:var(--saffron); border-radius:3px; transition:width .3s; }
   #sloka { font-size:1.2rem; line-height:1.9; color:var(--deep); }
   #meaning { margin-top:6px; color:var(--muted); font-size:.92rem; }
+  #samagri { display:none; }
+  #samagri label { display:block; padding:4px 0; font-size:1.02rem; }
+  #samagri h3 { margin:10px 0 2px; font-size:.95rem; color:var(--deep); }
+  #samagri ul { margin:0 0 4px 18px; padding:0; color:var(--muted); font-size:.95rem; }
+  #echoBox { display:none; margin-top:10px; padding:10px 12px; border:2px dashed var(--saffron); border-radius:10px; }
+  #echoBox b { display:block; font-size:1.3rem; color:var(--deep); margin:4px 0; }
   .ctrl { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
   .ctrl button, #inputbar button { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; padding:8px 12px; cursor:pointer; font:inherit; }
+  .primary { background:var(--saffron) !important; color:#fff !important; border-color:var(--saffron) !important; }
   #inputbar { display:flex; gap:8px; padding:10px 16px; border-top:1px solid var(--line); max-width:820px; width:100%; margin:0 auto; align-items:center; }
   #inputbar input[type=text] { flex:1; padding:10px 12px; border:1px solid var(--line); border-radius:10px; font:inherit; background:var(--card); color:var(--ink); min-width:0; }
   #mic.on { background:#c0392b; color:#fff; }
-  #send { background:var(--saffron) !important; color:#fff !important; border-color:var(--saffron) !important; }
   #status { text-align:center; color:var(--muted); font-size:.85rem; min-height:1.2em; }
   #gate { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; z-index:5; text-align:center; padding:20px; }
   #gate button { font:inherit; font-size:1.2rem; padding:14px 28px; border:0; border-radius:14px; background:var(--saffron); color:#fff; cursor:pointer; }
   #gate p { max-width:420px; color:var(--muted); }
+  header { position:relative; }
+  #menuBtn { position:absolute; left:10px; top:8px; width:42px; height:42px; border:1px solid var(--line); background:var(--card); color:var(--deep); border-radius:10px; font-size:1.4rem; cursor:pointer; }
+  #scrim { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:20; }
+  #drawer { position:fixed; top:0; bottom:0; left:0; width:min(420px,92vw); background:var(--bg); border-right:2px solid var(--gold); z-index:21; transform:translateX(-102%); transition:transform .25s; display:flex; flex-direction:column; }
+  body.libopen #drawer { transform:none; } body.libopen #scrim { display:block; }
+  #drawer .dh { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); }
+  #drawer .dh b { flex:1; color:var(--deep); }
+  #drawer button.x { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; }
+  #libSearch { margin:8px 12px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font:inherit; background:var(--card); color:var(--ink); }
+  #libBody { flex:1; overflow-y:auto; padding:0 12px 14px; }
+  .deity { display:flex; width:100%; align-items:center; gap:10px; text-align:left; padding:11px 12px; margin:6px 0; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:12px; cursor:pointer; font:inherit; }
+  .deity span.n { color:var(--muted); font-size:.85rem; margin-left:auto; }
+  .mcard { margin:8px 0; padding:10px 12px; border:1px solid var(--line); background:var(--card); border-radius:12px; }
+  .mcard.playing { border-color:var(--saffron); box-shadow:0 0 0 2px var(--saffron) inset; }
+  .mcard h4 { margin:0 0 4px; color:var(--deep); font-size:1rem; }
+  .mcard .t { white-space:pre-wrap; line-height:1.8; color:var(--deep); }
+  .mcard .m { margin-top:4px; color:var(--muted); font-size:.9rem; }
+  .mcard .u { font-size:.8rem; color:var(--muted); }
+  .mcard .ctrl { margin-top:6px; }
+  .chips { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:6px; font-size:.85rem; color:var(--muted); }
+  .chips button { border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:999px; padding:3px 11px; cursor:pointer; font:inherit; }
+  .chips button:hover { border-color:var(--saffron); }
+  #japaBar { display:none; align-items:center; gap:10px; padding:8px 16px; background:var(--saffron); color:#fff; font-size:.92rem; flex-wrap:wrap; }
+  #japaBar b { flex:1; min-width:140px; } #japaBar button { border:0; border-radius:8px; padding:5px 10px; cursor:pointer; font:inherit; background:#fff; color:var(--deep); }
   label.opt { font-size:.85rem; color:var(--muted); display:flex; gap:4px; align-items:center; }
 </style>
 </head>
@@ -45,19 +77,52 @@
 <div id="gate">
   <div style="font-size:3rem">🕉️</div>
   <h1 style="color:var(--deep);margin:0">आचार्य जी</h1>
-  <p>पूजा करवाने के लिए आगे बढ़ें। आवाज़ सुनने के लिए ध्वनि चालू रखें। बीच में टोकने के लिए माइक का उपयोग करें, और हेडफ़ोन लगाएँ तो बेहतर रहेगा।</p>
+  <p>पूजा करवाने के लिए आगे बढ़ें। आवाज़ सुनने के लिए ध्वनि चालू रखें। बीच में रोकने और मंत्र दोहराने के लिए माइक का उपयोग करें, और हेडफ़ोन लगाएँ तो बेहतर रहेगा।</p>
   <button id="enter">🙏 प्रवेश करें</button>
 </div>
 
-<header><h1>🕉️ आचार्य जी</h1><small>आपके पुरोहित, केवल पूजा और प्रार्थना के लिए</small></header>
+<div id="scrim"></div>
+<aside id="drawer" aria-label="मंत्र और श्लोक संग्रह">
+  <div class="dh"><b id="libTitle">📖 मंत्र और श्लोक संग्रह</b><button class="x" id="libBack" style="display:none">← सभी देवता</button><button class="x" id="libClose" aria-label="बंद करें">✕</button></div>
+  <input id="libSearch" type="search" placeholder="खोजें: जैसे गणेश, गायत्री, चालीसा…" autocomplete="off">
+  <label class="opt" style="padding:0 12px 4px"><input type="checkbox" id="libMeaning" checked> सुनाते समय अर्थ भी बोलें</label>
+  <div id="libBody"></div>
+</aside>
+<header>
+  <button id="menuBtn" aria-label="मंत्र और श्लोक संग्रह खोलें" title="मंत्र और श्लोक संग्रह">☰</button>
+  <h1>🕉️ आचार्य जी</h1><small>आपके पुरोहित, केवल पूजा और प्रार्थना के लिए</small>
+  <div id="voicebar">
+    <label>आवाज़: <select id="voiceSel"></select></label>
+    <button id="voiceTest" type="button" title="चुनी हुई आवाज़ सुनें">🔊 सुनें</button>
+    <label>शैली: <select id="style">
+      <option value="">अपनी पसंद</option>
+      <option value="0.6,0.75">गुरुजी: गहरा और धीमा</option>
+      <option value="0.7,0.85">आचार्य: गंभीर</option>
+      <option value="0.85,0.9">सौम्य पंडित</option>
+      <option value="0.45,0.7">गहन वैदिक स्वर</option>
+    </select></label>
+    <label class="opt"><input type="checkbox" id="moreVoices"> मराठी/नेपाली आवाज़ें भी (देवनागरी पढ़ती हैं)</label>
+    <small id="voiceCount"></small>
+    <label>गंभीरता: <input id="pitch" type="range" min="0.3" max="1.2" step="0.05" value="0.7"></label>
+    <label>गति: <input id="rate" type="range" min="0.6" max="1.1" step="0.05" value="0.85"></label>
+  </div>
+</header>
+<div id="japaBar"><b id="japaTitle"></b><span id="japaInfo"></span><button id="japaPause">⏸ रोकें</button><button id="japaStop">⏹ समाप्त</button></div>
 <main id="chat">
   <div id="stage">
     <h2 id="stTitle"></h2>
     <div id="bar"><i></i></div>
     <div id="stInstr" style="margin-bottom:8px"></div>
+    <div id="samagri"></div>
     <div id="sloka"></div>
     <div id="meaning"></div>
+    <div id="echoBox">आप मेरे पीछे दोहराइए (बोलकर या लिखकर):<b id="echoText"></b><button id="bEcho" class="ctrl-btn">✅ मैंने दोहरा दिया</button></div>
+    <div id="askBox" style="display:none;margin-top:10px;padding:10px 12px;border:2px dashed var(--saffron);border-radius:10px">
+      <b id="askText"></b>
+      <div class="ctrl"><button id="bYes" class="primary">✅ हाँ, सुनाइए</button><button id="bNo">⏭ नहीं, आगे बढ़ें</button></div>
+    </div>
     <div class="ctrl">
+      <button id="bReady" class="primary" style="display:none">✅ सामग्री तैयार है, पूजा आरंभ करें</button>
       <button id="bPause">⏸ रोकें</button>
       <button id="bResume">▶ आगे बढ़ें</button>
       <button id="bRepeat">↻ दोहराएँ</button>
@@ -73,21 +138,63 @@
   <input id="file" type="file" accept="image/*" capture="environment" hidden>
   <input id="text" type="text" placeholder="यहाँ लिखें या माइक दबाकर बोलें…" autocomplete="off">
   <button id="mic" title="बोलें">🎤</button>
-  <button id="send">भेजें</button>
+  <button id="send" class="primary">भेजें</button>
 </div>
 
 <script src="poojas.js"></script>
+<script src="mantras.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const S = { yajman: { name: '', gotra: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null };
+const S = { intro: false, asked: -1, ask: null, yajman: { name: '', gotra: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null, done: [], echo: null };
 const synth = window.speechSynthesis;
-let hiVoice = null;
-const pickVoice = () => { hiVoice = synth.getVoices().find((v) => /^hi/i.test(v.lang)) || null; };
-pickVoice(); synth.onvoiceschanged = pickVoice;
-
 const poojaById = (id) => POOJAS.find((p) => p.id === id);
 const fill = (t) => t.replaceAll('{नाम}', S.yajman.name || 'यजमान').replaceAll('{गोत्र}', S.yajman.gotra || 'कश्यप');
 const setStatus = (t) => { $('status').textContent = t || ''; };
+const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+// ---------- पुरोहित की आवाज़ ----------
+// पुरुष हिंदी आवाज़ को प्राथमिकता (Edge में "Microsoft Madhur" सबसे अच्छी है), स्वर गहरा और गति धीमी।
+let hiVoices = [];
+const isMale = (v) => /madhur|hemant|prabhat|manohar|sagar|male|पुरुष/i.test(v.name) && !/female|महिला/i.test(v.name);
+const isFemale = (v) => /kalpana|heera|swara|aarohi|ananya|female|google|महिला/i.test(v.name);
+const voiceScore = (v) => {
+  const n = v.name.toLowerCase(); let s = 0;
+  if (/madhur|hemant|prabhat|\bmale\b|पुरुष/.test(n)) s += 10;
+  if (/natural|online/.test(n)) s += 3;
+  if (/kalpana|heera|swara|female|google|महिला/.test(n)) s -= 6;
+  return s;
+};
+function loadVoices() {
+  const re = $('moreVoices').checked ? /^(hi|mr|ne|sa)/i : /^hi/i;
+  hiVoices = synth.getVoices().filter((v) => re.test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a));
+  const sel = $('voiceSel'), saved = store.get('voice', '');
+  sel.innerHTML = hiVoices.length ? '' : '<option>हिंदी आवाज़ नहीं मिली</option>';
+  hiVoices.forEach((v) => {
+    const o = document.createElement('option'); o.value = v.name;
+    o.textContent = (isMale(v) ? '♂ ' : isFemale(v) ? '♀ ' : '? ') + v.name + ' (' + v.lang + ')';
+    sel.appendChild(o);
+  });
+  const males = hiVoices.filter(isMale).length;
+  $('voiceCount').textContent = males ? `${males} पुरुष आवाज़${males > 1 ? 'ें' : ''} मिलीं` : 'कोई पुरुष आवाज़ नहीं मिली: Edge में खोलें, या Windows में हिंदी (Hemant) आवाज़ जोड़ें';
+  if (hiVoices.length) sel.value = hiVoices.some((v) => v.name === saved) ? saved : hiVoices[0].name;
+}
+loadVoices(); synth.onvoiceschanged = loadVoices;
+$('pitch').value = store.get('pitch', '0.7'); $('rate').value = store.get('rate', '0.85');
+$('voiceSel').onchange = (e) => { store.set('voice', e.target.value); sampleVoice(); };
+$('moreVoices').onchange = loadVoices;
+$('voiceTest').onclick = () => sampleVoice();
+$('style').onchange = (e) => {
+  if (!e.target.value) return;
+  const [p, r] = e.target.value.split(',');
+  $('pitch').value = p; $('rate').value = r; store.set('pitch', p); store.set('rate', r); sampleVoice();
+};
+function sampleVoice() {
+  const tok = ++S.token; synth.cancel();
+  say(tok, 'ॐ गं गणपतये नमः। नमस्ते यजमान, मैं आपका आचार्य हूँ।', 'sloka');
+}
+$('pitch').oninput = (e) => store.set('pitch', e.target.value);
+$('rate').oninput = (e) => store.set('rate', e.target.value);
+const curVoice = () => hiVoices.find((v) => v.name === $('voiceSel').value) || hiVoices[0] || null;
 
 // ---------- संदेश दिखाना ----------
 function add(who, text, imgSrc) {
@@ -100,31 +207,38 @@ function add(who, text, imgSrc) {
   return d;
 }
 function showMenu() {
+  const rest = POOJAS.filter((p) => !S.done.includes(p.name));
   const m = document.createElement('div'); m.className = 'menu';
-  POOJAS.forEach((p, i) => {
+  rest.forEach((p) => {
     const b = document.createElement('button');
-    b.innerHTML = `<b>${p.icon} ${i + 1}. ${p.name}</b><span>${p.desc}</span>`;
+    b.innerHTML = `<b>${p.icon} ${p.name}</b><span>${p.desc}</span>`;
     b.onclick = () => handleUser(`मुझे ${p.name} करवानी है`);
     m.appendChild(b);
   });
-  $('chat').insertBefore(m, $('stage'));
+  const o = document.createElement('div'); o.className = 'msg acharya';
+  o.textContent = 'ये कुछ प्रचलित पूजाएँ हैं। इनके अलावा आप कोई भी हिंदू पूजा या व्रत माँग सकते हैं, बस नाम बता दीजिए।';
+  $('chat').insertBefore(m, $('stage')); $('chat').insertBefore(o, $('stage'));
+  $('chat').scrollTop = $('chat').scrollHeight;
 }
 
-// ---------- बोलना (हिंदी आवाज़) ----------
+// ---------- बोलना ----------
 function chunks(text) {
   const parts = text.split(/(?<=[।॥?!\n])\s*/).map((s) => s.trim()).filter(Boolean);
   const out = [];
   for (const p of parts) { if (p.length <= 180) out.push(p); else out.push(...p.match(/.{1,180}(\s|$)/g)); }
   return out;
 }
-// सच लौटाता है अगर पूरा बोला गया; टोकने पर (टोकन बदलने पर) असत्य
-function say(tok, text, rate = 0.95) {
+// kind: 'talk' सामान्य बोल, 'sloka' धीमा और गहरा मंत्र-पाठ
+function say(tok, text, kind = 'talk') {
   return new Promise(async (resolve) => {
+    const base = parseFloat($('rate').value), pitch = parseFloat($('pitch').value);
     for (const c of chunks(text)) {
       if (tok !== S.token) return resolve(false);
       await new Promise((done) => {
         const u = new SpeechSynthesisUtterance(c);
-        u.lang = 'hi-IN'; if (hiVoice) u.voice = hiVoice; u.rate = rate;
+        const v = curVoice(); u.lang = v ? v.lang : 'hi-IN'; if (v) u.voice = v;
+        u.rate = kind === 'sloka' ? Math.max(0.55, base - 0.15) : base;
+        u.pitch = kind === 'sloka' ? Math.max(0.3, pitch - 0.1) : pitch;
         u.onend = u.onerror = done;
         synth.speak(u);
       });
@@ -134,67 +248,191 @@ function say(tok, text, rate = 0.95) {
 }
 const wait = (tok, ms) => new Promise((r) => setTimeout(() => r(tok === S.token), ms));
 
-function interrupt() { S.token++; synth.cancel(); }
+function interrupt() { S.token++; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted'); if (typeof japa !== 'undefined' && japa && !japa.paused) stopJapa(); }
 
-// ---------- पूजा चलाना ----------
+// ---------- मंच (स्टेज) के रूप ----------
+function stageMode(mode) {
+  $('stage').style.display = mode === 'off' ? 'none' : 'block';
+  const sam = mode === 'samagri';
+  $('samagri').style.display = sam ? 'block' : 'none';
+  $('bReady').style.display = sam ? '' : 'none';
+  ['bPause', 'bResume', 'bRepeat', 'bNext'].forEach((id) => { $(id).style.display = sam ? 'none' : ''; });
+  $('sloka').style.display = $('meaning').style.display = sam ? 'none' : '';
+}
 function renderStep() {
   const p = S.pooja, st = p.steps[S.step];
-  $('stage').style.display = 'block';
+  stageMode('run');
   $('stTitle').textContent = `${p.icon} ${p.name}: चरण ${S.step + 1}/${p.steps.length}, ${st.title}`;
   $('bar').firstElementChild.style.width = ((S.step) / p.steps.length * 100) + '%';
   $('stInstr').textContent = fill(st.instruction);
   $('sloka').textContent = fill(st.sloka);
   $('meaning').textContent = 'अर्थ: ' + st.meaning;
 }
+
+// ---------- सामग्री एकत्र करवाना ----------
+async function beginPooja(p) {
+  const tok = ++S.token; synth.cancel();
+  S.pooja = p; S.pending = null; S.step = 0; S.phase = 'samagri'; S.intro = false; S.asked = -1;
+  stageMode('samagri');
+  $('stTitle').textContent = `${p.icon} ${p.name}: पहले सामग्री एकत्र कीजिए`;
+  $('bar').firstElementChild.style.width = '0%';
+  $('stInstr').textContent = 'पूजा आरंभ करने से पहले तैयारी कर लीजिए और नीचे की सब सामग्री अपने पास रख लीजिए।';
+  const prep = p.prep || [];
+  $('samagri').innerHTML = (prep.length ? '<h3>पहले की तैयारी</h3><ul>' + prep.map((x) => `<li>${x}</li>`).join('') + '</ul>' : '')
+    + '<h3>सामग्री</h3>' + p.samagri.map((x) => `<label><input type="checkbox"> ${x}</label>`).join('');
+  const msg = `यजमान, ${p.name} आरंभ करने से पहले थोड़ी तैयारी कर लीजिए। ${prep.join(' ')} अब सारी सामग्री अपने पास एकत्र कर लीजिए। सामग्री यह है: ${p.samagri.join(', ')}। जब सब कुछ तैयार हो जाए, तो कहिए, मैं तैयार हूँ। मैं प्रतीक्षा करूँगा। कुछ कम हो तो बताइए, मैं उसका विकल्प बता दूँगा।`;
+  add('acharya', msg); S.hist.push({ role: 'assistant', text: msg });
+  setStatus('सामग्री एकत्र करके "मैं तैयार हूँ" कहिए या बटन दबाइए');
+  await say(tok, msg);
+}
+
+// ---------- मंत्र दोहरवाकर जाँचना ----------
+const norm = (t) => (t || '').replace(/ॐ/g, 'ओम').replace(/[॥।,.!?\-:;'"]/g, ' ').replace(/[​‌‍़]/g, '').replace(/\s+/g, ' ').trim();
+function lev(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function similarity(said, phrase) {
+  const a = norm(said).replace(/ /g, ''), b = norm(phrase).replace(/ /g, '');
+  if (!a || !b) return 0;
+  const chars = 1 - lev(a, b) / Math.max(a.length, b.length);
+  const sw = norm(said).split(' '), pw = norm(phrase).split(' ');
+  const words = pw.filter((w) => sw.some((x) => x === w || (w.length > 3 && lev(x, w) <= 1))).length / pw.length;
+  return Math.max(chars, words * 0.9);
+}
+const looksLikeAsk = (t) => /[?？]|क्या|क्यों|कैसे|अर्थ|मतलब|रुक|रोक|समझ|बताइए|बताओ/.test(t);
+const PASS = 0.55;
+
+// नतीजा: 'ok' | 'miss' | 'timeout' | 'skip' | 'interrupted'
+function listenEcho(phrase, ms) {
+  return new Promise((resolve) => {
+    let timer;
+    const finish = (r) => { clearTimeout(timer); S.echo = null; $('echoBox').style.display = 'none'; stopTempMic(); resolve(r); };
+    S.echo = { phrase, finish };
+    $('echoText').textContent = phrase; $('echoBox').style.display = 'block';
+    startTempMic();
+    setStatus(SR ? 'आपकी बारी: मंत्र दोहराइए…' : 'माइक उपलब्ध नहीं है: लिखकर दोहराइए या बटन दबाइए');
+    timer = setTimeout(() => finish('timeout'), ms);
+  });
+}
+// बोले या लिखे हुए पाठ का मिलान; वापसी: 'ok' | 'miss' | 'ask'
+function judgeEcho(text) {
+  const s = similarity(text, S.echo.phrase);
+  if (s >= PASS) return 'ok';
+  return looksLikeAsk(text) && s < 0.35 ? 'ask' : 'miss';
+}
+async function echoCheck(tok, phrase) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (!await say(tok, attempt === 0 ? 'यजमान, अब आप मेरे पीछे दोहराइए।' : 'कोई बात नहीं, एक बार फिर, धीरे-धीरे दोहराइए।')) return false;
+    if (!await say(tok, phrase, 'sloka')) return false;
+    const r = await listenEcho(phrase, 20000);
+    if (tok !== S.token || r === 'interrupted') return false;
+    if (r === 'ok' || r === 'skip') { await say(tok, 'बहुत सुंदर यजमान। उच्चारण शुद्ध है।'); return tok === S.token; }
+    if (attempt === 2) { await say(tok, 'कोई बात नहीं यजमान, भाव ही प्रधान है। आगे बढ़ते हैं।'); return tok === S.token; }
+  }
+  return true;
+}
+
+// ---------- हाँ/नहीं पूछना (वैकल्पिक पाठ के लिए) ----------
+const YES = /हाँ|हां|जी|सुना|कीजिए|कर दीजिए|ठीक|अवश्य|बिल्कुल|ज़रूर|जरूर/;
+const NO = /नहीं|नही|ना |छोड़|आगे बढ़|रहने दीजिए|मत/;
+// नतीजा: 'yes' | 'no' | 'timeout' | 'interrupted'
+function askYesNo(question, ms) {
+  return new Promise((resolve) => {
+    let timer;
+    const finish = (r) => { clearTimeout(timer); S.ask = null; $('askBox').style.display = 'none'; stopTempMic(); resolve(r); };
+    S.ask = { finish };
+    $('askText').textContent = question; $('askBox').style.display = 'block';
+    startTempMic();
+    setStatus('हाँ या नहीं कहिए, या बटन दबाइए');
+    timer = setTimeout(() => finish('timeout'), ms);
+  });
+}
+// बोले या लिखे हुए उत्तर को समझना: 'yes' | 'no' | 'other'
+const judgeYesNo = (t) => (NO.test(t) ? 'no' : YES.test(t) ? 'yes' : 'other');
+async function offerOptional(tok, st) {
+  const q = `यजमान, क्या आप ${st.title} भी सुनना चाहेंगे? हाँ या नहीं कहिए।`;
+  if (!await say(tok, q)) return null;
+  const r = await askYesNo(q, 25000);
+  if (tok !== S.token || r === 'interrupted') return null;
+  if (r === 'timeout') { await say(tok, 'कोई उत्तर नहीं मिला, इसलिए हम इसे छोड़कर आगे बढ़ते हैं।'); return tok === S.token ? false : null; }
+  return r === 'yes';
+}
+async function introRules(tok, p) {
+  const lines = [];
+  if (p.benefit) lines.push('इस पूजा का फल है: ' + p.benefit);
+  if (p.do && p.do.length) lines.push('ध्यान रखने योग्य: ' + p.do.join(' '));
+  if (p.dont && p.dont.length) lines.push('इनसे बचिए: ' + p.dont.join(' '));
+  if (!lines.length) return true;
+  $('stInstr').textContent = lines.join('\n');
+  stageMode('run'); $('stTitle').textContent = `${p.icon} ${p.name}: आरंभ से पहले`;
+  $('sloka').textContent = ''; $('meaning').textContent = '';
+  if (!await say(tok, lines.join(' '))) return false;
+  return wait(tok, 1500);
+}
+
+// ---------- पूजा चलाना ----------
 async function run() {
   const tok = ++S.token; synth.cancel();
-  S.phase = 'running'; setStatus('पूजा चल रही है… बीच में टोकने के लिए बोलें या लिखें');
+  S.phase = 'running'; setStatus('पूजा चल रही है… बीच में रोकने के लिए बोलें या लिखें');
   const p = S.pooja;
+  if (S.step === 0 && !S.intro) { if (!await introRules(tok, p)) return; S.intro = true; }
   while (S.step < p.steps.length) {
     renderStep();
     const st = p.steps[S.step];
+    if (st.optional && S.asked !== S.step) {
+      const want = await offerOptional(tok, st);
+      if (want === null) return;
+      S.asked = S.step;
+      if (!want) { S.step++; continue; }
+      renderStep();
+    }
     if (!await say(tok, fill(st.instruction))) return;
-    if (!await say(tok, fill(st.sloka), 0.8)) return;
+    if (!await say(tok, fill(st.sloka), 'sloka')) return;
     if ($('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
-    if (!await wait(tok, 3500)) return;
+    if (st.echo && !await echoCheck(tok, st.echo)) return;
+    if (!await wait(tok, st.wait || 3500)) return;
     S.step++;
   }
-  S.phase = 'idle';
-  $('stage').style.display = 'none';
-  const done = `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि आप कोई और पूजा करवाना चाहें तो बताइए।`;
-  add('acharya', done); S.pooja = null; S.pending = null; showMenu();
+  S.phase = 'idle'; stageMode('off');
+  S.done.push(p.name); S.pooja = null; S.pending = null;
+  const done = `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि और कोई पूजा करवानी हो, तो नाम बताइए।`;
+  add('acharya', done); S.hist.push({ role: 'assistant', text: done }); showMenu();
   await say(tok, done);
-  setStatus('');
-}
-function startPooja(id) {
-  S.pooja = poojaById(id); S.pending = null; S.step = 0; run();
+  setStatus('अगली पूजा के लिए नाम बताइए');
 }
 function stopPooja() {
-  interrupt(); S.phase = 'idle'; S.pooja = null; S.pending = null; $('stage').style.display = 'none'; setStatus('');
+  interrupt(); S.intro = false; S.phase = 'idle'; S.pooja = null; S.pending = null; stageMode('off'); setStatus('');
 }
 
 // ---------- यजमान से संवाद ----------
 async function handleUser(text, image) {
   text = (text || '').trim();
   if (!text && !image) return;
-  const wasRunning = S.phase === 'running' || S.phase === 'paused';
+  const prev = S.phase;
+  const wasRunning = prev === 'running' || prev === 'paused';
   interrupt();                       // यजमान ने टोका: तुरंत बोलना बंद
-  if (S.pooja) S.phase = 'interrupted';
+  if (S.pooja && prev !== 'samagri') S.phase = 'interrupted';
   const myReq = ++S.req;
   add('yajman', text || 'यह चित्र देखिए', image && image.url);
   S.hist.push({ role: 'user', text: text || '(चित्र भेजा गया)' });
   setStatus('आचार्य जी सुन रहे हैं…');
   let out;
-  try {
+  if (S.offline) out = localReply(text);
+  else try {
     const r = await fetch('/api/chat', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         messages: S.hist, image: image ? { media_type: image.media_type, data: image.data } : null,
-        state: { yajman: S.yajman, pooja: S.pooja && S.pooja.id, pending: S.pending, step: S.step, phase: S.phase },
+        state: { yajman: S.yajman, pooja: S.pooja && S.pooja.id, pending: S.pending, step: S.step, phase: S.phase, done: S.done },
       }),
     });
     out = await r.json();
-  } catch { out = { reply: 'क्षमा कीजिए यजमान, संपर्क में बाधा आ गई। कृपया दोबारा कहिए।', intent: 'clarify' }; }
+    if (out.offline) { S.offline = true; setStatus('ऑफ़लाइन मोड: Claude से संपर्क नहीं हो पाया'); out = localReply(text); }
+  } catch { S.offline = true; out = localReply(text); }
   if (myReq !== S.req) return;       // इस बीच यजमान ने फिर कुछ कहा; पुराना उत्तर छोड़ दें
   setStatus('');
   if (out.yajman) { if (out.yajman.name) S.yajman.name = out.yajman.name; if (out.yajman.gotra) S.yajman.gotra = out.yajman.gotra; }
@@ -205,30 +443,225 @@ async function handleUser(text, image) {
   await say(tok, out.reply);
   if (tok !== S.token) return;       // बोलते समय फिर टोका गया
   const intent = out.intent;
-  if (intent === 'start' && (out.pooja_id || S.pending)) startPooja(out.pooja_id || S.pending);
+  if (intent === 'start') {
+    const p = out.custom ? POOJAS.makeCustom(out.custom) : poojaById(out.pooja_id || S.pending);
+    if (p && !S.pooja) beginPooja(p);
+  } else if (intent === 'library') { await handleLibrary(out.library, out.reply); if (S.pooja && S.phase !== 'samagri') setStatus('पूजा रुकी हुई है। संग्रह बंद करके "आगे बढ़ें" दबाइए।'); }
   else if (intent === 'stop') stopPooja();
+  else if (prev === 'samagri' && S.pooja) {
+    if (intent === 'ready') run(); else setStatus('सामग्री तैयार हो जाए तो "मैं तैयार हूँ" कहिए');
+  }
   else if (S.pooja && (intent === 'resume' || (wasRunning && intent === 'chat'))) run();
   else if (S.pooja && intent === 'repeat') run();
   else if (S.pooja && intent === 'next') { S.step = Math.min(S.step + 1, S.pooja.steps.length - 1); run(); }
   else if (S.pooja) setStatus('पूजा रुकी हुई है। "आगे बढ़ें" दबाएँ या बोलें।');
 }
 
-// ---------- आवाज़ से इनपुट (बीच में टोकना) ----------
+// ---------- ऑफ़लाइन मोड: बिना Claude के, कीवर्ड से समझना ----------
+const KEYS = {
+  ganesh: /गणेश|गणपति|गणेष/, lakshmi: /लक्ष्मी|लक्ष्मि|लक्षमी/, satyanarayan: /सत्यनारायण|सत्यनारायन|सत्य ?नारायण/,
+  shiv: /शिव|रुद्र|महादेव|शंकर/, hanuman: /हनुमान|बजरंग/, durga: /दुर्गा|दुर्गे|माता|देवी/,
+};
+function localReply(text) {
+  const t = text || '';
+  const yajman = {};
+  const n = t.match(/(?:मेरा नाम|नाम)\s+(\S+)/); if (n) yajman.name = n[1];
+  const g = t.match(/गोत्र\s+(\S+)/); if (g) yajman.gotra = g[1];
+  const out = (reply, intent = 'chat', pooja_id = null) => ({ reply, intent, pooja_id, yajman });
+  if (/मंत्र|श्लोक|स्तोत्र|संग्रह|चालीसा/.test(t)) {
+    const LK = { ganesh: /गणेश|गणपति/, shiv: /शिव|रुद्र|महादेव/, vishnu: /विष्णु|नारायण/, lakshmi: /लक्ष्मी/, durga: /दुर्गा|देवी|माता/, hanuman: /हनुमान|बजरंग|चालीसा/, ram: /राम/, krishna: /कृष्ण|गोविंद|गोविन्द/, saraswati: /सरस्वती/, surya: /सूर्य/, general: /गायत्री|सामान्य|प्रार्थना/ };
+    const deity = Object.keys(LK).find((k) => LK[k].test(t)) || null;
+    const o = out(deity ? 'जी यजमान, संग्रह खोलता हूँ।' : 'जी यजमान, मंत्र संग्रह खोलता हूँ।', 'library'); o.library = { deity, mantra: null }; return o;
+  }
+  const id = Object.keys(KEYS).find((k) => KEYS[k].test(t));
+  if (id && !S.pooja) {
+    const p = poojaById(id);
+    return out(`ठीक है यजमान, ${p.name} की तैयारी करते हैं। मैं नाम की जगह यजमान और गोत्र कश्यप मानकर संकल्प लूँगा।`, 'start', id);
+  }
+  if (S.pooja && S.phase === 'samagri') {
+    if (/तैयार|हो गया|हो गई|सब है|ठीक|हाँ|हां/.test(t)) return out('बहुत अच्छा यजमान, अब पूजा आरंभ करते हैं।', 'ready');
+    if (/समाप्त|बंद|रद्द/.test(t)) return out('ठीक है यजमान, पूजा नहीं करते। ॐ शांतिः।', 'stop');
+    return out('यजमान, सामग्री तैयार हो जाए तो कहिए, मैं तैयार हूँ।');
+  }
+  if (S.pooja) {
+    if (/समाप्त|बंद|खत्म|ख़त्म|स्टॉप/.test(t)) return out('ठीक है यजमान, पूजा यहीं समाप्त करते हैं। क्षमा प्रार्थना। ॐ शांतिः।', 'stop');
+    if (/दोहरा|फिर से|दोबारा/.test(t)) return out('जी यजमान, इस चरण को दोबारा करते हैं।', 'repeat');
+    if (/अगला|छोड़|आगे बढ़ा/.test(t)) return out('जी यजमान, अगले चरण पर चलते हैं।', 'next');
+    if (/आगे|जारी|चालू|शुरू|ठीक|हाँ|हां/.test(t)) return out('जी यजमान, पूजा आगे बढ़ाते हैं।', 'resume');
+    return out('यजमान, अभी मैं सीमित रूप में चल रहा हूँ, इसलिए आपका प्रश्न पूरी तरह नहीं समझ पाया। आप कह सकते हैं: आगे बढ़ो, दोहराओ, अगला, या समाप्त। अब हम पूजा वहीं से आगे बढ़ाते हैं।', 'resume');
+  }
+  return out('यजमान, अभी मैं सीमित रूप में चल रहा हूँ। कृपया नीचे से पूजा चुनिए, या कहिए: गणेश पूजन, लक्ष्मी पूजन, सत्यनारायण, शिव पूजन, हनुमान पूजन, या दुर्गा पूजन।');
+}
+fetch('/api/mode').then((r) => r.json()).then((m) => { S.offline = !!m.offline; if (S.offline) setStatus('ऑफ़लाइन मोड: सीमित सुविधाएँ'); }).catch(() => {});
+
+// ---------- मंत्र और श्लोक संग्रह ----------
+let libDeity = null;
+const libOpen = () => document.body.classList.contains('libopen');
+function openLibrary(deityId, mantraId) {
+  if (S.phase === 'running') { interrupt(); S.phase = 'paused'; setStatus('पूजा रुकी है। संग्रह बंद करके "आगे बढ़ें" दबाइए।'); }
+  libDeity = deityId || null;
+  $('libSearch').value = '';
+  document.body.classList.add('libopen');
+  renderLibrary();
+  if (mantraId) { const el = document.querySelector('[data-mid="' + mantraId + '"]'); if (el) el.scrollIntoView({ block: 'center' }); }
+}
+function closeLibrary() { document.body.classList.remove('libopen'); }
+function mantraCard(it, deityName) {
+  const d = document.createElement('div'); d.className = 'mcard'; d.dataset.mid = it.id;
+  d.innerHTML = '<h4></h4><div class="u"></div><div class="t"></div><div class="m"></div><div class="ctrl"><button data-a="play">🔊 एक बार सुनें</button><button data-a="stop">⏹ रोकें</button></div><div class="chips" data-k="c"></div><div class="chips" data-k="m"></div>';
+  d.querySelector('h4').textContent = it.title;
+  d.querySelector('.u').textContent = [deityName, it.use].filter(Boolean).join(' · ');
+  d.querySelector('.t').textContent = it.text;
+  d.querySelector('.m').textContent = 'अर्थ: ' + it.meaning;
+  d.querySelector('[data-a=play]').onclick = () => playMantra(it);
+  d.querySelector('[data-a=stop]').onclick = () => { stopJapa(); interrupt(); markPlaying(null); };
+  // जप के विकल्प: शुभ संख्याएँ और समय। लंबे पाठ (स्तोत्र, आरती) के लिए छोटी संख्याएँ
+  const long = it.text.length > 260;
+  const addRow = (sel, label, vals, mk) => {
+    const row = d.querySelector(sel); row.append(label);
+    vals.forEach((n) => { const b = document.createElement('button'); b.textContent = mk.text(n); b.onclick = () => startJapa(it, mk.opt(n)); row.appendChild(b); });
+  };
+  addRow('[data-k=c]', 'जप (बार): ', long ? [3, 5, 11] : [11, 21, 51, 108], { text: (n) => n, opt: (n) => ({ count: n }) });
+  addRow('[data-k=m]', 'समय: ', long ? [10, 15] : [5, 10, 15, 30], { text: (n) => n + ' मिनट', opt: (n) => ({ minutes: n }) });
+  return d;
+}
+function markPlaying(id) { document.querySelectorAll('.mcard').forEach((c) => c.classList.toggle('playing', c.dataset.mid === id)); }
+async function playMantra(it) {
+  stopJapa();
+  const tok = ++S.token; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted');
+  markPlaying(it.id);
+  if (!await say(tok, it.title + '।')) return;
+  if (!await say(tok, it.text, 'sloka')) return;
+  if ($('libMeaning').checked && !await say(tok, 'अर्थ। ' + it.meaning)) return;
+  markPlaying(null);
+}
+// ---------- जप: गिनती या समय के अनुसार बार-बार सुनाना ----------
+let japa = null, japaTick = null;
+const fmt = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+function japaUpdate() {
+  if (!japa) return;
+  const left = japa.endAt ? (japa.paused ? japa.remaining : japa.endAt - Date.now()) : 0;
+  $('japaTitle').textContent = '🪔 ' + japa.it.title;
+  $('japaInfo').textContent = (japa.target ? japa.count + ' / ' + japa.target + ' बार' : japa.count + ' बार · शेष ' + fmt(left)) + (japa.paused ? ' · रुका है' : '');
+  $('japaPause').textContent = japa.paused ? '▶ आगे बढ़ें' : '⏸ रोकें';
+}
+function japaDone() { return japa.target ? japa.count >= japa.target : Date.now() >= japa.endAt; }
+function stopJapa() { japa = null; clearInterval(japaTick); $('japaBar').style.display = 'none'; markPlaying(null); }
+async function japaLoop() {
+  const id = ++japa.loop, tok = ++S.token; synth.cancel(); japa.tok = tok;
+  if (japa.endAt === 0 && japa.minutes) japa.endAt = Date.now() + japa.remaining;
+  while (japa && japa.loop === id) {
+    if (!await say(tok, japa.it.text, 'sloka')) { if (japa && japa.loop === id && !japa.paused) stopJapa(); return; }
+    japa.count++; japaUpdate();
+    if (japaDone()) break;
+    if (!await wait(tok, 900)) { if (japa && japa.loop === id && !japa.paused) stopJapa(); return; }
+  }
+  if (!japa || japa.loop !== id) return;
+  const t = japa.it.title; stopJapa();
+  await say(tok, 'जप पूर्ण हुआ। ' + t + '। ॐ शांतिः शांतिः शांतिः।');
+}
+async function startJapa(it, { count, minutes }) {
+  if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted');
+  if (S.phase === 'running') { S.phase = 'paused'; setStatus('पूजा रुकी है। जप के बाद "आगे बढ़ें" दबाइए।'); }
+  stopJapa();
+  japa = { it, count: 0, target: count || 0, minutes: minutes || 0, endAt: 0, remaining: (minutes || 0) * 60000, paused: false, loop: 0, tok: 0 };
+  $('japaBar').style.display = 'flex'; markPlaying(it.id);
+  clearInterval(japaTick); japaTick = setInterval(japaUpdate, 1000);
+  japaUpdate();
+  const tok = ++S.token; synth.cancel();
+  const what = count ? count + ' बार' : minutes + ' मिनट';
+  add('acharya', it.title + ': ' + what + ' का जप आरंभ।');
+  if (!await say(tok, it.title + '। ' + what + ' का जप आरंभ करते हैं।')) { if (japa && japa.it === it && japa.count === 0) stopJapa(); return; }
+  japaLoop();
+}
+function toggleJapa() {
+  if (!japa) return;
+  if (japa.paused) { japa.paused = false; japa.endAt = japa.minutes ? Date.now() + japa.remaining : 0; if (!japa.minutes) japa.endAt = 0; japaUpdate(); japaLoop(); }
+  else { japa.paused = true; japa.remaining = japa.minutes ? Math.max(0, japa.endAt - Date.now()) : 0; japa.endAt = 0; S.token++; synth.cancel(); japaUpdate(); }
+}
+$('japaPause').onclick = toggleJapa;
+$('japaStop').onclick = () => { stopJapa(); interrupt(); };
+
+function renderLibrary() {
+  const body = $('libBody'), q = $('libSearch').value.trim();
+  body.innerHTML = '';
+  const deity = libDeity ? MANTRAS.find(libDeity) : null;
+  $('libBack').style.display = deity || q ? '' : 'none';
+  $('libTitle').textContent = deity ? deity.icon + ' ' + deity.name : '📖 मंत्र और श्लोक संग्रह';
+  if (q) {                                          // सब देवताओं में खोज
+    const hits = MANTRAS.flatMap((d) => d.items.filter((i) => (i.title + i.text + i.meaning + i.use + d.name).includes(q)).map((i) => ({ i, d })));
+    if (!hits.length) body.textContent = 'कुछ नहीं मिला। दूसरा शब्द आज़माइए।';
+    hits.forEach(({ i, d }) => body.appendChild(mantraCard(i, d.name)));
+    return;
+  }
+  if (deity) { deity.items.forEach((i) => body.appendChild(mantraCard(i, ''))); return; }
+  MANTRAS.forEach((d) => {
+    const b = document.createElement('button'); b.className = 'deity';
+    b.innerHTML = '<span>' + d.icon + '</span><b></b><span class="n">' + d.items.length + ' मंत्र</span>';
+    b.querySelector('b').textContent = d.name;
+    b.onclick = () => { libDeity = d.id; renderLibrary(); };
+    body.appendChild(b);
+  });
+}
+$('menuBtn').onclick = () => openLibrary();
+$('libClose').onclick = $('scrim').onclick = closeLibrary;
+$('libBack').onclick = () => { libDeity = null; $('libSearch').value = ''; renderLibrary(); };
+$('libSearch').oninput = renderLibrary;
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && libOpen()) closeLibrary(); });
+
+// आचार्य जी से माँगने पर: सूची बोलना या सीधे मंत्र सुनाना
+async function handleLibrary(lib, said = '') {
+  lib = lib || {};
+  const found = lib.mantra ? MANTRAS.findItem(lib.mantra) : null;
+  openLibrary(found ? found.deity.id : lib.deity, lib.mantra);
+  const tok = ++S.token;
+  if (found && (lib.count || lib.minutes)) { startJapa(found.item, { count: lib.count || 0, minutes: lib.minutes || 0 }); return; }
+  if (found) { await playMantra(found.item); return; }
+  const d = lib.deity ? MANTRAS.find(lib.deity) : null;
+  // आचार्य जी का उत्तर पहले ही नाम गिना चुका हो तो दोबारा न बोलें
+  if (!d && MANTRAS.slice(0, 3).every((x) => said.includes(x.name.replace(/^(श्री|माँ) /, '')))) return;
+  if (d && d.items.slice(0, 2).every((i) => said.includes(i.title))) return;
+  const msg = d
+    ? `${d.name} के ये मंत्र और श्लोक हैं: ${d.items.map((i) => i.title).join(', ')}। कौन-सा सुनाऊँ?`
+    : `मेरे संग्रह में इन देवताओं के मंत्र और श्लोक हैं: ${MANTRAS.map((x) => x.name).join(', ')}। किसके मंत्र सुनाऊँ?`;
+  add('acharya', msg); S.hist.push({ role: 'assistant', text: msg });
+  await say(tok, msg);
+}
+
+// ---------- आवाज़ से इनपुट (बीच में रोकना और मंत्र दोहराना) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, micOn = false;
+let rec = null, micOn = false, micTemp = false;
 function initMic() {
   if (!SR) { $('mic').disabled = true; $('mic').title = 'इस ब्राउज़र में आवाज़ पहचान नहीं है (Chrome या Edge उपयोग करें)'; return; }
   rec = new SR(); rec.lang = 'hi-IN'; rec.continuous = true; rec.interimResults = true;
   rec.onresult = (e) => {
-    const r = e.results[e.results.length - 1];
+    const r = e.results[e.results.length - 1], said = r[0].transcript;
+    if (S.ask) {                                   // हाँ/नहीं की प्रतीक्षा
+      setStatus('सुन रहा हूँ: ' + said);
+      if (!r.isFinal) return;
+      const j = judgeYesNo(said);
+      if (j === 'yes') S.ask.finish('yes'); else if (j === 'no') S.ask.finish('no'); else handleUser(said);
+      return;
+    }
+    if (S.echo) {                                  // मंत्र दोहराने की प्रतीक्षा
+      setStatus('सुन रहा हूँ: ' + said);
+      if (!r.isFinal) return;
+      const j = judgeEcho(said);
+      if (j === 'ok') S.echo.finish('ok');
+      else if (j === 'ask') handleUser(said);      // यह दोहराना नहीं, कोई प्रश्न है
+      else S.echo.finish('miss');
+      return;
+    }
     // यजमान ने बोलना शुरू किया: तुरंत शांत हो जाएँ
-    if (S.phase === 'running' || synth.speaking) { interrupt(); if (S.pooja) S.phase = 'interrupted'; }
-    setStatus('सुन रहा हूँ: ' + r[0].transcript);
-    if (r.isFinal) handleUser(r[0].transcript);
+    if (S.phase === 'running' || synth.speaking) { interrupt(); if (S.pooja && S.phase !== 'samagri') S.phase = 'interrupted'; }
+    setStatus('सुन रहा हूँ: ' + said);
+    if (r.isFinal) handleUser(said);
   };
-  rec.onend = () => { if (micOn) try { rec.start(); } catch {} };
-  rec.onerror = (e) => { if (e.error === 'not-allowed') { micOn = false; $('mic').classList.remove('on'); setStatus('माइक की अनुमति नहीं मिली।'); } };
+  rec.onend = () => { if (micOn || micTemp) try { rec.start(); } catch {} };
+  rec.onerror = (e) => { if (e.error === 'not-allowed') { micOn = micTemp = false; $('mic').classList.remove('on'); setStatus('माइक की अनुमति नहीं मिली।'); } };
 }
+function startTempMic() { if (rec && !micOn) { micTemp = true; try { rec.start(); } catch {} } }
+function stopTempMic() { if (micTemp && !micOn) { micTemp = false; try { rec.stop(); } catch {} } }
 $('mic').onclick = () => {
   if (!rec) return;
   micOn = !micOn; $('mic').classList.toggle('on', micOn);
@@ -237,12 +670,25 @@ $('mic').onclick = () => {
 
 // ---------- लिखकर और चित्र से इनपुट ----------
 function send() {
-  const t = $('text').value; const img = S.image; $('text').value = ''; S.image = null; $('photo').textContent = '📷';
+  const t = $('text').value; const img = S.image;
+  if (S.ask && t.trim() && !img) {                 // लिखकर हाँ/नहीं
+    const j = judgeYesNo(t);
+    if (j !== 'other') { $('text').value = ''; add('yajman', t); S.ask.finish(j); return; }
+  }
+  if (S.echo && t.trim() && !img) {                // लिखकर मंत्र दोहराना
+    const j = judgeEcho(t);
+    if (j !== 'ask') {
+      $('text').value = ''; add('yajman', t);
+      S.echo.finish(j === 'ok' ? 'ok' : 'miss');
+      return;
+    }                                               // प्रश्न है: नीचे सामान्य संवाद की तरह जाएगा
+  }
+  $('text').value = ''; S.image = null; $('photo').textContent = '📷';
   handleUser(t, img);
 }
 $('send').onclick = send;
 $('text').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
-$('text').addEventListener('input', () => { if (S.phase === 'running') { interrupt(); S.phase = 'interrupted'; setStatus('आपने टोका है, लिखकर भेजिए…'); } });
+$('text').addEventListener('input', () => { if (S.phase === 'running' && !S.echo && !S.ask) { interrupt(); S.phase = 'interrupted'; setStatus('आपने रोका है, लिखकर भेजिए…'); } });
 $('photo').onclick = () => $('file').click();
 $('file').onchange = () => {
   const f = $('file').files[0]; if (!f) return;
@@ -264,12 +710,16 @@ $('bPause').onclick = () => { interrupt(); if (S.pooja) { S.phase = 'paused'; se
 $('bResume').onclick = () => { if (S.pooja) run(); };
 $('bRepeat').onclick = () => { if (S.pooja) run(); };
 $('bNext').onclick = () => { if (S.pooja) { S.step = Math.min(S.step + 1, S.pooja.steps.length - 1); run(); } };
-$('bStop').onclick = () => { stopPooja(); add('acharya', 'ठीक है यजमान, पूजा यहीं समाप्त करते हैं। क्षमा प्रार्थना: क्षमस्व परमेश्वर। ॐ शांतिः।'); };
+$('bReady').onclick = () => { if (S.pooja && S.phase === 'samagri') run(); };
+$('bEcho').onclick = () => { if (S.echo) S.echo.finish('skip'); };
+$('bYes').onclick = () => { if (S.ask) S.ask.finish('yes'); };
+$('bNo').onclick = () => { if (S.ask) S.ask.finish('no'); };
+$('bStop').onclick = () => { stopPooja(); add('acharya', 'ठीक है यजमान, पूजा यहीं समाप्त करते हैं। क्षमा प्रार्थना: क्षमस्व परमेश्वर। ॐ शांतिः। कोई और पूजा करवानी हो तो बताइए।'); };
 
 // ---------- आरंभ ----------
 $('enter').onclick = async () => {
   $('gate').style.display = 'none'; initMic();
-  const g = 'नमस्ते यजमान, मैं आचार्य जी हूँ। आपका स्वागत है। मैं आपके लिए विधिपूर्वक पूजा करवाऊँगा और मंत्र तथा श्लोक का पाठ करूँगा। कृपया बताइए, आज आप कौन-सी पूजा करवाना चाहते हैं? गणेश पूजन, लक्ष्मी पूजन, सत्यनारायण पूजा, शिव पूजन, हनुमान पूजन, या दुर्गा पूजन? आप बोलकर, लिखकर, या नीचे दिए बटन दबाकर चुन सकते हैं। पूजा के बीच में आप कभी भी मुझे टोक सकते हैं।';
+  const g = 'नमस्ते यजमान, मैं आचार्य जी हूँ। मैं आपके लिए विधिपूर्वक पूजा करवाऊँगा और मंत्र तथा श्लोक का पाठ करूँगा। आज आप कौन-सी पूजा करवाना चाहते हैं? जैसे आप कह सकते हैं: मुझे गणेश पूजन करवाना है। आप इनके अलावा कोई भी और हिंदू पूजा बता सकते हैं। पूजा के बीच में आप कभी भी मुझे रोक सकते हैं।';
   add('acharya', g); showMenu();
   S.hist.push({ role: 'assistant', text: g });
   await say(++S.token, g);
