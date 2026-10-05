@@ -27,6 +27,19 @@ If neither works the page falls back to a limited keyword-based offline mode.
 4. The Yajman can interrupt any time: the priest restates the ask, answers, then resumes.
 5. After a pooja finishes, another can be started without repeating the first.
 
+## Recorded voices (optional, better pronunciation)
+Mantras and shlokas can be played from audio files instead of the browser voice.
+Files are generated with the open-source Indic Parler-TTS through its Hugging Face Space
+(no key or GPU needed; free GPU quota is limited, so large runs may need retries).
+
+    node tools/export-jobs.js                      # list of texts to record -> tools/audio-jobs.json
+    node tools/generate-audio.js --samples         # a few mantras in 2 voices, then open /samples.html to listen
+    node tools/generate-audio.js --all --speaker Aryan   # record everything (resumable)
+
+The app looks up each shloka by a hash of its text in public/audio/manifest.json and plays the file;
+if a file is missing or fails it falls back to the browser voice. To use a real pandit's recording,
+replace a file in public/audio/ with the same name.
+
 ## Files
 - `server.js`: Claude call (API or Agent SDK), system prompt, Hindi-only guard
 - `public/poojas.js`: pooja catalog, shlokas, custom-pooja builder

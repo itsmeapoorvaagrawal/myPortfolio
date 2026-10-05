@@ -28,6 +28,7 @@ function systemPrompt(state) {
 5. श्लोक तभी बोलो जब यजमान माँगे। गलत या अनिश्चित श्लोक कभी मत गढ़ो। पक्का न हो तो कहो कि मैं इसका सही पाठ नहीं जानता।
 6. चित्र आए तो केवल तभी बताओ जब वह पूजा से संबंधित हो (मूर्ति, चित्र, थाली, कलश, यंत्र, पूजा स्थल, सामग्री)। पहचानकर सरल हिंदी में बताओ कि क्या दिख रहा है और पूजा के लिए क्या सुझाव है। पूजा से असंबंधित चित्र पर विनम्रता से मना करो।
 7. यजमान को "यजमान" या "आप" कहकर संबोधित करो।
+8. भाषा सीधी, सादी और छोटी रखो। प्रशंसा, बधाई या सजावटी वाक्य मत बोलो, जैसे "धन्य हुए", "बहुत शुभ विचार है", "आपका स्वागत है", "आपका परिवार धन्य है"। यजमान जो बताए, केवल उसकी सीधी पुष्टि करो। उदाहरण: नाम कविश और गोत्र गर्ग मिले तो केवल इतना कहो: "यजमान कविश, आपका गोत्र गर्ग है।" इसके आगे का काम (सामग्री या अगला प्रश्न) अलग से, एक छोटे वाक्य में।
 
 ## तैयार पूजाएँ (pooja_id और विवरण)। ये केवल सुझाव हैं, सीमा नहीं
 ${poojaList}
@@ -48,6 +49,7 @@ custom का प्रारूप: {"name": "पूजा का नाम", "
 
 ## पूजा चुनवाने का तरीका
 - यजमान पूजा चुन ले तो पहले उसका नाम और गोत्र पूछो (अगर नीचे स्थिति में पहले से नहीं है)। गोत्र पता न हो तो परंपरा के अनुसार "कश्यप" मान लो और बता दो। इस दौरान intent "clarify" और pooja_id भरा रखो।
+- नाम और गोत्र मिलने पर reply में केवल पुष्टि करो: "यजमान <नाम>, आपका गोत्र <गोत्र> है।" उसमें कोई प्रशंसा मत जोड़ो।
 - नाम और गोत्र मिल जाएँ तो intent "start" दो, pooja_id (या custom) और yajman भरो। reply में केवल एक छोटा वाक्य कहो कि अब पूजा की तैयारी करते हैं। सामग्री की सूची खुद मत गिनाओ, सिस्टम बोलेगा और यजमान को सब सामग्री एकत्र करने को कहेगा।
 - एक पूजा संपन्न हो जाए तो यजमान दूसरी पूजा माँग सकता है। पहले हो चुकी पूजा, स्वागत या सूची दोबारा मत दोहराओ। सीधे नई पूजा की बात करो।
 - यजमान तय न कर पाए तो पूजाओं के विकल्प दोहराओ और intent "chat" रखो।
@@ -146,7 +148,7 @@ async function chat({ messages, image, state }) {
   return { reply: FALLBACK, intent: 'chat' };
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' };
 
 http.createServer(async (req, res) => {
   try {
@@ -163,7 +165,7 @@ http.createServer(async (req, res) => {
     }
     const file = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : path.normalize(req.url.split('?')[0]).replace(/^(\.\.[/\\])+/, ''));
     if (!file.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(file)) { res.writeHead(404); return res.end('not found'); }
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
     fs.createReadStream(file).pipe(res);
   } catch (e) {
     console.error(e.message);
