@@ -68,9 +68,6 @@
   .chips { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:6px; font-size:.85rem; color:var(--muted); }
   .chips button { border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:999px; padding:3px 11px; cursor:pointer; font:inherit; }
   .chips button:hover { border-color:var(--saffron); }
-  #padBox { display:none; position:fixed; left:50%; bottom:76px; transform:translateX(-50%); width:min(560px,94vw); z-index:23; background:var(--card); border:2px solid var(--saffron); border-radius:14px; padding:12px 14px; box-shadow:0 8px 30px rgba(0,0,0,.35); text-align:center; }
-  #padBox small { color:var(--muted); } #padBox b { display:block; font-size:1.5rem; line-height:1.7; color:var(--deep); margin:4px 0 8px; }
-  #padBox .ctrl { justify-content:center; }
   #japaBar { display:none; align-items:center; gap:10px; padding:8px 16px; background:var(--saffron); color:#fff; font-size:.92rem; flex-wrap:wrap; }
   #japaBar b { flex:1; min-width:140px; } #japaBar button { border:0; border-radius:8px; padding:5px 10px; cursor:pointer; font:inherit; background:#fff; color:var(--deep); }
   label.opt { font-size:.85rem; color:var(--muted); display:flex; gap:4px; align-items:center; }
@@ -110,7 +107,6 @@
     <label>गति: <input id="rate" type="range" min="0.6" max="1.1" step="0.05" value="0.85"></label>
   </div>
 </header>
-<div id="padBox"><small id="padInfo"></small><b id="padText"></b><div class="ctrl"><button id="padOk" class="primary">✅ मैंने दोहरा दिया</button><button id="padSkip">⏭ यह पद छोड़ें</button><button id="padStop">⏹ अभ्यास समाप्त</button></div></div>
 <div id="japaBar"><b id="japaTitle"></b><span id="japaInfo"></span><button id="japaPause">⏸ रोकें</button><button id="japaStop">⏹ समाप्त</button></div>
 <main id="chat">
   <div id="stage">
@@ -133,8 +129,6 @@
       <button id="bNext">⏭ अगला चरण</button>
       <button id="bStop">⏹ समाप्त</button>
       <label class="opt"><input type="checkbox" id="oMeaning" checked> अर्थ भी सुनाएँ</label>
-      <label class="opt"><input type="checkbox" id="oPada" checked> मंत्र पद-पद पर दोहरवाएँ</label>
-      <label class="opt"><input type="checkbox" id="oExt" checked> विस्तृत आरंभ विधि</label>
     </div>
   </div>
 </main>
@@ -254,7 +248,7 @@ function say(tok, text, kind = 'talk') {
 }
 const wait = (tok, ms) => new Promise((r) => setTimeout(() => r(tok === S.token), ms));
 
-function interrupt() { S.token++; synth.cancel(); if (typeof hidePad === 'function') hidePad(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted'); if (typeof japa !== 'undefined' && japa && !japa.paused) stopJapa(); }
+function interrupt() { S.token++; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted'); if (typeof japa !== 'undefined' && japa && !japa.paused) stopJapa(); }
 
 // ---------- मंच (स्टेज) के रूप ----------
 function stageMode(mode) {
@@ -330,58 +324,6 @@ function judgeEcho(text) {
   if (s >= PASS) return 'ok';
   return looksLikeAsk(text) && s < 0.35 ? 'ask' : 'miss';
 }
-// ---------- पद-पद पर दोहराना ----------
-// मंत्र को अर्ध-पंक्तियों में बाँटकर, लंबी पंक्ति को तीन-तीन शब्दों तक के पदों में तोड़ना
-function padas(text) {
-  const out = [];
-  text.split(/[।॥]/).map((x) => x.trim()).filter(Boolean).forEach((h) => {
-    const w = h.split(/\s+/), k = Math.ceil(w.length / 3), size = Math.ceil(w.length / k);
-    for (let i = 0; i < w.length; i += size) out.push(w.slice(i, i + size).join(' '));
-  });
-  return out;
-}
-const PAD_MAX_CHARS = 260;
-const padOk = (text) => text.length <= PAD_MAX_CHARS && padas(text).length >= 2;
-let padStopped = false;
-function showPad(i, n, phrase) { $('padInfo').textContent = 'पद ' + (i + 1) + ' / ' + n; $('padText').textContent = phrase; $('padBox').style.display = 'block'; }
-function hidePad() { $('padBox').style.display = 'none'; }
-// सच लौटाता है अगर अभ्यास पूरा हुआ; असत्य अगर बीच में रोका गया
-async function padPractice(tok, text) {
-  const ps = padas(text); padStopped = false;
-  if (ps.length < 2) return true;
-  if (!await say(tok, 'अब हम इसे पद-पद पर दोहराएँगे। मैं एक पद बोलूँगा, फिर आप साफ़ और खुले गले से उसे दोहराइए। संकोच मत कीजिए।')) return false;
-  for (let i = 0; i < ps.length; i++) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      showPad(i, ps.length, ps[i]);
-      if (!await say(tok, attempt ? 'फिर से, धीरे-धीरे।' : '')) { hidePad(); return false; }
-      if (!await say(tok, ps[i], 'sloka')) { hidePad(); return false; }
-      const r = await listenEcho(ps[i], 15000);
-      if (tok !== S.token || r === 'interrupted' || padStopped) { hidePad(); return false; }
-      if (r === 'ok' || r === 'skip') break;
-      if (attempt === 1 && !await say(tok, 'कोई बात नहीं, आगे बढ़ते हैं।')) { hidePad(); return false; }
-    }
-  }
-  hidePad();
-  if (!await say(tok, 'बहुत सुंदर। अब पूरा मंत्र एक साथ सुनिए।')) return false;
-  if (!await say(tok, text, 'sloka')) return false;
-  return true;
-}
-$('padOk').onclick = () => { if (S.echo) S.echo.finish('skip'); };
-$('padSkip').onclick = () => { if (S.echo) S.echo.finish('skip'); };
-$('padStop').onclick = () => { padStopped = true; hidePad(); interrupt(); };
-// संग्रह से सीधे अभ्यास
-async function startPadLibrary(it) {
-  stopJapa();
-  if (S.phase === 'running') { S.phase = 'paused'; setStatus('पूजा रुकी है। अभ्यास के बाद "आगे बढ़ें" दबाइए।'); }
-  const tok = ++S.token; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted');
-  markPlaying(it.id);
-  add('acharya', it.title + ': पद-पद पर दोहराने का अभ्यास।');
-  if (!await say(tok, it.title + '।')) return;
-  const done = await padPractice(tok, it.text);
-  markPlaying(null);
-  if (done) await say(tok, 'अभ्यास पूर्ण हुआ। ॐ शांतिः।');
-}
-
 async function echoCheck(tok, phrase) {
   for (let attempt = 0; attempt < 3; attempt++) {
     if (!await say(tok, attempt === 0 ? 'यजमान, अब आप मेरे पीछे दोहराइए।' : 'कोई बात नहीं, एक बार फिर, धीरे-धीरे दोहराइए।')) return false;
@@ -439,7 +381,6 @@ async function run() {
   const p = S.pooja;
   if (S.step === 0 && !S.intro) { if (!await introRules(tok, p)) return; S.intro = true; }
   while (S.step < p.steps.length) {
-    if (p.steps[S.step].extended && !$('oExt').checked) { S.step++; continue; }
     renderStep();
     const st = p.steps[S.step];
     if (st.optional && S.asked !== S.step) {
@@ -452,9 +393,7 @@ async function run() {
     if (!await say(tok, fill(st.instruction))) return;
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
     if ($('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
-    const didPada = st.padwise && $('oPada').checked && padOk(fill(st.sloka));
-    if (didPada) { if (!await padPractice(tok, fill(st.sloka))) return; }
-    else if (st.echo && !await echoCheck(tok, st.echo)) return;
+    if (st.echo && !await echoCheck(tok, st.echo)) return;
     if (!await wait(tok, st.wait || 3500)) return;
     S.step++;
   }
@@ -569,14 +508,13 @@ function openLibrary(deityId, mantraId) {
 function closeLibrary() { document.body.classList.remove('libopen'); }
 function mantraCard(it, deityName) {
   const d = document.createElement('div'); d.className = 'mcard'; d.dataset.mid = it.id;
-  d.innerHTML = '<h4></h4><div class="u"></div><div class="t"></div><div class="m"></div><div class="ctrl"><button data-a="play">🔊 एक बार सुनें</button><button data-a="stop">⏹ रोकें</button><button data-a="pada">🗣 पद-पद पर दोहराएँ</button></div><div class="chips" data-k="c"></div><div class="chips" data-k="m"></div>';
+  d.innerHTML = '<h4></h4><div class="u"></div><div class="t"></div><div class="m"></div><div class="ctrl"><button data-a="play">🔊 एक बार सुनें</button><button data-a="stop">⏹ रोकें</button></div><div class="chips" data-k="c"></div><div class="chips" data-k="m"></div>';
   d.querySelector('h4').textContent = it.title;
   d.querySelector('.u').textContent = [deityName, it.use].filter(Boolean).join(' · ');
   d.querySelector('.t').textContent = it.text;
   d.querySelector('.m').textContent = 'अर्थ: ' + it.meaning;
   d.querySelector('[data-a=play]').onclick = () => playMantra(it);
-  d.querySelector('[data-a=stop]').onclick = () => { stopJapa(); interrupt(); markPlaying(null); hidePad(); };
-  if (padOk(it.text)) d.querySelector('[data-a=pada]').onclick = () => startPadLibrary(it); else d.querySelector('[data-a=pada]').style.display = 'none';
+  d.querySelector('[data-a=stop]').onclick = () => { stopJapa(); interrupt(); markPlaying(null); };
   // जप के विकल्प: शुभ संख्याएँ और समय। लंबे पाठ (स्तोत्र, आरती) के लिए छोटी संख्याएँ
   const long = it.text.length > 260;
   const addRow = (sel, label, vals, mk) => {
@@ -677,7 +615,6 @@ async function handleLibrary(lib, said = '') {
   const found = lib.mantra ? MANTRAS.findItem(lib.mantra) : null;
   openLibrary(found ? found.deity.id : lib.deity, lib.mantra);
   const tok = ++S.token;
-  if (found && lib.padwise) { if (padOk(found.item.text)) { startPadLibrary(found.item); } else { await playMantra(found.item); } return; }
   if (found && (lib.count || lib.minutes)) { startJapa(found.item, { count: lib.count || 0, minutes: lib.minutes || 0 }); return; }
   if (found) { await playMantra(found.item); return; }
   const d = lib.deity ? MANTRAS.find(lib.deity) : null;
