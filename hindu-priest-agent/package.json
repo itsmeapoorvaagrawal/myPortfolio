@@ -1,0 +1,17 @@
+{
+  "name": "hindu-priest-agent",
+  "version": "1.0.0",
+  "description": "Standalone Node app (no dependencies, separate from the Next.js site). Claude plays a Hindu priest who performs poojas for the Yajman: Hindi-only, shlokas in Hindi/Sanskrit, pooja menu, text/voice/image input, and interrupt-clarify-resume.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.288"
+  }
+}
