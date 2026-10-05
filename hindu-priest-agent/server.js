@@ -39,6 +39,7 @@ ${mantraCatalog}
 - reply में केवल एक छोटा वाक्य कहो, जैसे "जी यजमान, गणेश जी के मंत्र खोलता हूँ।" सूची खुद मत गिनाओ, सिस्टम स्क्रीन पर दिखाएगा और नाम बोलेगा।
 - जो मंत्र इस संग्रह में नहीं है, उसके बारे में मना करो कि वह मेरे संग्रह में नहीं है, और संग्रह के निकटतम मंत्र का सुझाव दो। अपनी ओर से श्लोक मत गढ़ो।
 - यजमान किसी मंत्र को बार-बार या कुछ देर तक सुनना चाहे, जैसे "ॐ नमः शिवाय 108 बार सुनाओ" या "गणेश मंत्र दस मिनट सुनाओ", तो "library" में "count" (बार की संख्या, जैसे 11, 21, 51, 108) या "minutes" (मिनट) भी भरो। दोनों में से जो बताया गया हो वही भरो, बाकी null। संख्या मंत्र_id के साथ ही भरो। संख्या शब्दों में हो ("इक्यावन", "एक सौ आठ") तो अंकों में बदलकर भरो। मंत्र साफ़ न हो तो पूछ लो और intent "clarify" रखो।
+- यजमान किसी मंत्र को पद-पद पर सीखना या दोहराना चाहे, जैसे "महामृत्युंजय मंत्र पद-पद पर सिखाइए" या "मैं गायत्री मंत्र आपके साथ दोहराना चाहता हूँ", तो "library" में मंत्र_id के साथ "padwise": true भरो।
 - पूजा करवाने की माँग (जैसे "गणेश पूजन करवाना है") और मंत्र सुनने की माँग (जैसे "गणेश जी का मंत्र सुनाओ") अलग हैं। पहली पर "start" और दूसरी पर "library" दो।
 
 ## सूची से बाहर की पूजा
@@ -64,7 +65,7 @@ ${state.phase === 'interrupted' ? 'यजमान ने पूजा के �
 
 ## आउटपुट का प्रारूप
 केवल एक JSON ऑब्जेक्ट लौटाओ, उसके बाहर कुछ नहीं:
-{"understood": "यजमान की बात तुमने क्या समझी, एक छोटा हिंदी वाक्य", "reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null"}}
+{"understood": "यजमान की बात तुमने क्या समझी, एक छोटा हिंदी वाक्य", "reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null, "padwise": true या null}, "yajman": {"name": "या null", "gotra": "या null"}}
 intent का अर्थ: chat = सामान्य बातचीत, clarify = स्पष्टीकरण या जानकारी चाहिए, start = पूजा शुरू करो, resume = पूजा जहाँ रुकी थी वहीं से चालू करो (पूजा चल रही या रुकी हो और टोकने का उत्तर पूरा हो गया), repeat = वर्तमान चरण दोबारा, next = अगला चरण, ready = सामग्री तैयार है, पूजा शुरू करो, stop = पूजा समाप्त, library = मंत्र संग्रह खोलो।
 intent "clarify" केवल तब रखो जब reply के अंत में तुम यजमान से कोई प्रश्न पूछ रहे हो। टोकने का उत्तर पूरा देकर पूजा आगे बढ़ाने की बात कहो तो intent "resume" रखो। intent "start" तभी दो जब reply में कहो कि अब पूजा आरंभ करते हैं, "तैयार हो तो कहिए" जैसा प्रश्न न पूछो।
 "reply" में "understood" की बात दोहराना ज़रूरी नहीं, पर टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
@@ -136,7 +137,7 @@ async function chat({ messages, image, state }) {
       const found = lib.mantra ? MANTRAS.findItem(lib.mantra) : null;
       const num = (x, max) => { const n = Math.round(Number(x)); return n >= 1 ? Math.min(n, max) : null; };
       out.library = { deity: found ? found.deity.id : (MANTRAS.find(lib.deity) ? lib.deity : null), mantra: found ? lib.mantra : null,
-        count: found ? num(lib.count, 1008) : null, minutes: found && !lib.count ? num(lib.minutes, 60) : null };
+        count: found ? num(lib.count, 1008) : null, minutes: found && !lib.count ? num(lib.minutes, 60) : null, padwise: !!(found && lib.padwise) };
       if (!['chat', 'clarify', 'start', 'ready', 'library', 'resume', 'repeat', 'next', 'stop'].includes(out.intent)) out.intent = 'chat';
       if (state.phase === 'interrupted' && out.intent === 'clarify' && !/[?？]/.test(out.reply)) out.intent = 'resume';
       return out;
