@@ -2,3 +2,5 @@ node_modules/
 public/audio-samples/
 tools/audio-jobs.json
 tools/samples/
+tools/*.log
+tools/*.bak

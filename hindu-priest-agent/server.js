@@ -15,10 +15,8 @@ const FALLBACK = 'क्षमा कीजिए यजमान, मैं क
 const mantraCatalog = MANTRAS.map((d) => `- ${d.id}: ${d.name} → ${d.items.map((i) => `${i.id} (${i.title})`).join('; ')}`).join('\n');
 const poojaList = POOJAS.map((p) => `- ${p.id}: ${p.name} (${p.desc}) सामग्री: ${p.samagri.join(', ')}`).join('\n');
 
-function systemPrompt(state) {
-  const cur = state.pooja ? POOJAS.find((p) => p.id === state.pooja) : null;
-  const step = cur && cur.steps[state.step];
-  return `तुम "आचार्य जी" हो, एक विद्वान, शांत और विनम्र हिंदू पुरोहित। तुम यजमान (पूजा करवाने वाले) की पूजा करवाते हो।
+// यह निर्देश कभी नहीं बदलता, इसलिए Claude की प्रक्रिया पहले से तैयार रखी जा सकती है। बदलती स्थिति यजमान के संदेश के साथ जाती है।
+const STATIC_SYSTEM = `तुम "आचार्य जी" हो, एक विद्वान, शांत और विनम्र हिंदू पुरोहित। तुम यजमान (पूजा करवाने वाले) की पूजा करवाते हो।
 
 ## कठोर नियम
 1. भाषा: केवल हिंदी, देवनागरी लिपि में। श्लोक और मंत्र संस्कृत में (देवनागरी) बोले जा सकते हैं। अंग्रेज़ी या किसी और भाषा का एक भी शब्द या रोमन अक्षर नहीं। यजमान किसी और भाषा में लिखे तब भी उत्तर हिंदी में ही दो। अंक भी शब्दों में या देवनागरी अंकों में लिखो।
@@ -54,7 +52,17 @@ custom का प्रारूप: {"name": "पूजा का नाम", "
 - एक पूजा संपन्न हो जाए तो यजमान दूसरी पूजा माँग सकता है। पहले हो चुकी पूजा, स्वागत या सूची दोबारा मत दोहराओ। सीधे नई पूजा की बात करो।
 - यजमान तय न कर पाए तो पूजाओं के विकल्प दोहराओ और intent "chat" रखो।
 
-## वर्तमान स्थिति
+## आउटपुट का प्रारूप
+केवल एक JSON ऑब्जेक्ट लौटाओ, उसके बाहर कुछ नहीं:
+{"reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null"}}
+intent का अर्थ: chat = सामान्य बातचीत, clarify = स्पष्टीकरण या जानकारी चाहिए, start = पूजा शुरू करो, resume = पूजा जहाँ रुकी थी वहीं से चालू करो (पूजा चल रही या रुकी हो और टोकने का उत्तर पूरा हो गया), repeat = वर्तमान चरण दोबारा, next = अगला चरण, ready = सामग्री तैयार है, पूजा शुरू करो, stop = पूजा समाप्त, library = मंत्र संग्रह खोलो।
+intent "clarify" केवल तब रखो जब reply के अंत में तुम यजमान से कोई प्रश्न पूछ रहे हो। टोकने का उत्तर पूरा देकर पूजा आगे बढ़ाने की बात कहो तो intent "resume" रखो। intent "start" तभी दो जब reply में कहो कि अब पूजा आरंभ करते हैं, "तैयार हो तो कहिए" जैसा प्रश्न न पूछो।
+टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
+
+function stateText(state) {
+  const cur = state.pooja ? POOJAS.find((p) => p.id === state.pooja) : null;
+  const step = cur && cur.steps[state.step];
+  return `## वर्तमान स्थिति
 यजमान का नाम: ${state.yajman?.name || 'अभी पता नहीं'}
 यजमान का गोत्र: ${state.yajman?.gotra || 'अभी पता नहीं'}
 चुनी हुई या प्रतीक्षित पूजा: ${state.pending || (cur ? cur.id : 'कोई नहीं')}
@@ -62,14 +70,7 @@ custom का प्रारूप: {"name": "पूजा का नाम", "
 ${cur && step ? `वर्तमान चरण: ${state.step + 1}/${cur.steps.length} — ${step.title}\nइस चरण का मंत्र: ${step.sloka}\nइस चरण का अर्थ: ${step.meaning}` : ''}
 ${(state.done && state.done.length) ? `संपन्न हो चुकी पूजाएँ: ${state.done.join(', ')}` : ''}
 ${state.phase === 'samagri' ? 'यजमान से सामग्री एकत्र करने को कहा गया है और पूजा आरंभ नहीं हुई। यजमान कहे कि सब तैयार है, तभी intent "ready" दो। सामग्री के बारे में प्रश्न हो (कुछ कम है, विकल्प क्या है) तो उत्तर दो और intent "chat" रखो। जो चीज़ न मिले उसका उचित शास्त्रीय विकल्प बताओ, जैसे घी न हो तो तेल का दीपक, पुष्प न हों तो अक्षत।' : ''}
-${state.phase === 'interrupted' ? 'यजमान ने पूजा के बीच में टोका है। नियम तीन का पालन करो।' : ''}
-
-## आउटपुट का प्रारूप
-केवल एक JSON ऑब्जेक्ट लौटाओ, उसके बाहर कुछ नहीं:
-{"understood": "यजमान की बात तुमने क्या समझी, एक छोटा हिंदी वाक्य", "reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null"}}
-intent का अर्थ: chat = सामान्य बातचीत, clarify = स्पष्टीकरण या जानकारी चाहिए, start = पूजा शुरू करो, resume = पूजा जहाँ रुकी थी वहीं से चालू करो (पूजा चल रही या रुकी हो और टोकने का उत्तर पूरा हो गया), repeat = वर्तमान चरण दोबारा, next = अगला चरण, ready = सामग्री तैयार है, पूजा शुरू करो, stop = पूजा समाप्त, library = मंत्र संग्रह खोलो।
-intent "clarify" केवल तब रखो जब reply के अंत में तुम यजमान से कोई प्रश्न पूछ रहे हो। टोकने का उत्तर पूरा देकर पूजा आगे बढ़ाने की बात कहो तो intent "resume" रखो। intent "start" तभी दो जब reply में कहो कि अब पूजा आरंभ करते हैं, "तैयार हो तो कहिए" जैसा प्रश्न न पूछो।
-"reply" में "understood" की बात दोहराना ज़रूरी नहीं, पर टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
+${state.phase === 'interrupted' ? 'यजमान ने पूजा के बीच में टोका है। नियम तीन का पालन करो।' : ''}`;
 }
 
 const hasLatin = (s) => /[A-Za-z]/.test(s || '');
@@ -78,6 +79,21 @@ const values = (o) => (o && typeof o === 'object' ? Object.values(o).flatMap(val
 // दो रास्ते: ANTHROPIC_API_KEY हो तो सीधे API; वरना Claude Agent SDK, जो आपके Claude Code लॉगिन से चलता है।
 const os = require('os');
 let sdk;
+// Agent SDK के विकल्प: सोचना बंद और कम मेहनत (जवाब जल्दी आए), और तेज़ मॉडल। CLAUDE_MODEL से बदला जा सकता है।
+const sdkOptions = (system) => ({
+  systemPrompt: system, tools: [], maxTurns: 1, persistSession: false, settingSources: [], cwd: os.tmpdir(),
+  thinking: { type: 'disabled' }, effort: 'low', model: process.env.CLAUDE_MODEL || 'sonnet',
+});
+// हर संदेश पर Claude को नए सिरे से शुरू करने में कई सेकंड जाते हैं। इसलिए अगली प्रक्रिया पहले से तैयार रखते हैं।
+let warmP = null;
+const spawnWarm = () => { warmP = sdk.startup({ options: sdkOptions(STATIC_SYSTEM) }).catch(() => null); };
+async function openQuery(options, prompt) {
+  let w = null;
+  if (warmP) { w = await warmP; warmP = null; }
+  spawnWarm();
+  if (w) { try { return w.query(prompt); } catch (e) { /* तैयार प्रक्रिया नहीं चली: नीचे सीधे चलाएँगे */ } }
+  return sdk.query({ prompt, options });
+}
 async function callClaude(system, messages, image) {
   if (API_KEY) {
     const msgs = messages.map((m) => ({ role: m.role, content: m.content }));
@@ -98,13 +114,7 @@ async function callClaude(system, messages, image) {
   const content = [{ type: 'text', text: `अब तक की बातचीत (आख़िरी संदेश का उत्तर दो):\n${transcript}` }];
   if (image) content.unshift({ type: 'image', source: { type: 'base64', media_type: image.media_type, data: image.data } });
   async function* input() { yield { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }; }
-  const q = sdk.query({
-    prompt: input(),
-    options: {
-      systemPrompt: system, tools: [], maxTurns: 1, persistSession: false, settingSources: [],
-      cwd: os.tmpdir(), ...(process.env.CLAUDE_MODEL ? { model: process.env.CLAUDE_MODEL } : {}),
-    },
-  });
+  const q = await openQuery(sdkOptions(system), input());
   let text = '';
   for await (const m of q) {
     if (m.type === 'result') {
@@ -122,16 +132,17 @@ function parse(text) {
 }
 
 async function chat({ messages, image, state }) {
-  const system = systemPrompt(state);
+  const system = STATIC_SYSTEM;
   const msgs = messages.slice(-16).map((m) => ({ role: m.role, content: m.text || '(चित्र)' }));
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   const last = msgs[msgs.length - 1];
   if (!last || last.role !== 'user') return { reply: FALLBACK, intent: 'chat' };
+  last.content = stateText(state) + '\n\nयजमान का नया संदेश: ' + last.content;
   let convo = msgs;
   for (let attempt = 0; attempt < 2; attempt++) {
     const text = await callClaude(system, convo, image);
     const out = parse(text);
-    if (out && out.reply && ![out.reply, out.understood, ...values(out.custom)].some(hasLatin)) {
+    if (out && out.reply && ![out.reply, ...values(out.custom)].some(hasLatin)) {
       const ids = POOJAS.map((p) => p.id);
       if (!ids.includes(out.pooja_id)) out.pooja_id = null;
       const lib = out.library || {};
@@ -165,11 +176,23 @@ http.createServer(async (req, res) => {
     }
     const file = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : path.normalize(req.url.split('?')[0]).replace(/^(\.\.[/\\])+/, ''));
     if (!file.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(file)) { res.writeHead(404); return res.end('not found'); }
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+    const size = fs.statSync(file).size, type = MIME[path.extname(file)] || 'application/octet-stream';
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m) {                                         // ऑडियो के टुकड़े माँगने पर (ठहराव बराबर करने के लिए आगे-पीछे जाना)
+      const a = m[1] === '' ? size - parseInt(m[2], 10) : parseInt(m[1], 10);
+      const b = m[1] === '' || m[2] === '' ? size - 1 : Math.min(parseInt(m[2], 10), size - 1);
+      if (!(a >= 0 && a <= b && a < size)) { res.writeHead(416, { 'content-range': 'bytes */' + size }); return res.end(); }
+      res.writeHead(206, { 'content-type': type, 'cache-control': 'no-store', 'accept-ranges': 'bytes', 'content-range': `bytes ${a}-${b}/${size}`, 'content-length': b - a + 1 });
+      return fs.createReadStream(file, { start: a, end: b }).pipe(res);
+    }
+    res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store', 'accept-ranges': 'bytes', 'content-length': size });
     fs.createReadStream(file).pipe(res);
   } catch (e) {
     console.error(e.message);
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ offline: true, reply: 'क्षमा कीजिए यजमान, कुछ बाधा आ गई।', intent: 'chat' }));
   }
-}).listen(PORT, () => console.log(`आचार्य जी तैयार हैं: http://localhost:${PORT}`));
+}).listen(PORT, () => {
+  if (!API_KEY) import('@anthropic-ai/claude-agent-sdk').then((m) => { sdk = m; spawnWarm(); }).catch(() => {});
+  console.log(`आचार्य जी तैयार हैं: http://localhost:${PORT}`);
+});
