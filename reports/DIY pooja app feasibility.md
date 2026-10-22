@@ -58,6 +58,37 @@ The regulatory risk is concentrated in commerce, not guidance. The CCPA fined Am
 
 For go-to-market, the app should position itself as the DIY guide that Sri Mandir is not, and launch around festivals, when intent peaks and kits sell. The notes did not research CAC, creator or WhatsApp funnels, or the size of festival download spikes, so those need early experiments.
 
+## A voice guide fits, if mantras come from real pandits
+
+Learning by listening and repeating is how pooja is traditionally taught, so a voice guide suits the product well. Build it as recorded pandit audio plus voice controls, not as a free-talking AI pandit.
+
+**How to build it**
+
+- **Mantras:** recorded by real pandits, played line by line with pauses so the user repeats, with transliteration and meaning on screen. There is no production-ready Sanskrit voice yet.
+- **Instructions** (e.g. "now offer flowers"): Hindi or regional AI voice, which is cheap (Sarvam: about ₹15–30 per 10,000 characters) and easy to update.
+- **Hands-free controls:** "next", "repeat", "slower", with tap buttons kept as a fallback.
+- **Questions** (e.g. "no kumkum, what now?"): answered only from the pandit-reviewed vidhi text, with "ask a pandit" for anything outside it.
+
+**Pros**
+
+- Closest to a real pandit: listen and repeat.
+- Works for people who can't read Devanagari: diaspora children, Gen Z and older users.
+- Hands-free while holding a diya, flowers or water.
+- Correct pronunciation taught by example from a pandit's recording.
+- A sankalp spoken with the family's name, gotra and place.
+- A natural upsell to a paid live-pandit call.
+
+**Cons**
+
+- **Pronunciation checking isn't ready.** Bhashini lists a Sanskrit speech recogniser, but its accuracy is unknown. Wrong "correct/incorrect" feedback would hurt trust and invite orthodox criticism, so make it a later beta and never a gate.
+- **AI chat can make things up.** A made-up ritual instruction is worse than no answer, so keep answers limited to the vetted text.
+- **Orthodox objections.** Some traditions reserve Vedic mantras for those who have had the sacred-thread ceremony, so offer name-mantra or Puranic alternatives and keep the tone humble ("guide", not "pandit replacement").
+- **Practical problems:** the mic may struggle with bells, conch, chanting or a noisy room; an always-listening mic during pooja may worry some users; and recording regional chanting styles adds content cost.
+
+**Voice MVP:** pandit-recorded repeat-after-me mantras, AI voice for instructions, next/repeat/slower voice commands and offline download. Pronunciation scoring and open AI chat come after launch.
+
+*Note: this section draws on the same tech research as the rest of the report. Mic accuracy and the cost of running voice features were not researched separately.*
+
 ## Conclusion
 
 The usual objection, that Hindus need a pandit, holds for samskaras and largely fails for the household bhakti poojas that make up most of the year's ritual calendar. App Pandit Ji's strategic choice is how to treat the pandit. As a competitor, the pandit is a source of priestly backlash. As a paid fallback inside the app, the pandit becomes a revenue line and a source of legitimacy. The strongest wedge is an NRI family in New Jersey or Dubai the night before Diwali, with no pandit available and a willingness to pay about 10x Indian ARPU for confidence that they are doing it right.
