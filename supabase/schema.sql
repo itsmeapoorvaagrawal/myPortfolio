@@ -55,31 +55,39 @@ create policy "Authenticated users can delete projects"
   to authenticated
   using (true);
 
--- Optional: seed the 3 example projects the site originally shipped with.
+-- Optional: seed the real projects from the myPortfolio repo.
 -- Safe to delete this block if you'd rather start from an empty table.
 insert into public.projects (title, description, tags, live_url, code_url, sort_order)
 values
   (
-    'Task Flow',
-    'A collaborative task management app with real-time updates, drag-and-drop boards, and team workspaces.',
-    array['Next.js', 'TypeScript', 'PostgreSQL'],
+    'आचार्य जी - Hindi Pooja Voice Agent',
+    'A Hindi-only voice agent where Claude plays a Hindu priest and guides the Yajman through poojas with shlokas, text/voice/image input, recorded-voice playback and interrupt-clarify-resume.',
+    array['Node.js', 'Claude API', 'Web Speech', 'Voice AI'],
     null,
-    null,
+    'https://github.com/itsmeapoorvaagrawal/myPortfolio/tree/feature/hindu-priest-agent/hindu-priest-agent',
     0
   ),
   (
-    'Weatherly',
-    'A minimal weather dashboard that surfaces hyperlocal forecasts with clean data visualizations.',
-    array['React', 'Node.js', 'REST API'],
+    'DIY Pooja App - Feasibility Study',
+    'Market, competitor, user-acceptance and tech-risk research with a go-to-market plan and voice-guide concept for a do-it-yourself pooja app.',
+    array['Research', 'Product Strategy', 'Market Analysis'],
     null,
-    null,
+    'https://github.com/itsmeapoorvaagrawal/myPortfolio/tree/claude/nice-bohr-mb6wfl/reports',
     1
   ),
   (
-    'ShopStack',
-    'A full-stack e-commerce storefront with cart, checkout, and an admin dashboard for inventory.',
-    array['Next.js', 'Stripe', 'Tailwind CSS'],
+    'Portfolio Website',
+    'This personal portfolio: a responsive dark-themed Next.js site with hero, about, projects and contact sections.',
+    array['Next.js', 'TypeScript', 'Tailwind CSS'],
     null,
-    null,
+    'https://github.com/itsmeapoorvaagrawal/myPortfolio',
     2
+  ),
+  (
+    'Portfolio Admin Portal',
+    'A Supabase-backed admin portal to add, edit and delete portfolio projects, secured with Auth and Postgres row-level security.',
+    array['Supabase', 'Next.js', 'PostgreSQL', 'RLS'],
+    null,
+    'https://github.com/itsmeapoorvaagrawal/myPortfolio/tree/feature/supabase-projects-admin',
+    3
   );
