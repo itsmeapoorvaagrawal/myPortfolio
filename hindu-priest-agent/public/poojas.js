@@ -251,7 +251,17 @@
   ];
 
 
+  // लक्ष्मी पूजन: PDF पर आधारित ज्ञान-आधार (knowledge/lakshmi.js) मिले तो पूजा का क्रम, सामग्री और निर्देश केवल उसी से।
+  // न मिले (फ़ाइल हटा दी गई हो) तो ऊपर वाली सामान्य लक्ष्मी पूजा चलती है।
+  let LKB = null;
+  try { LKB = typeof module !== 'undefined' && module.exports ? require('./knowledge/lakshmi.js') : root.LAKSHMI_KB; } catch (e) { LKB = null; }
+  if (LKB) {
+    const i = POOJAS.findIndex((x) => x.id === 'lakshmi');
+    const kbPooja = { id: 'lakshmi', name: LKB.name, icon: '🪷', desc: 'दीपावली पर लक्ष्मी-गणेश पूजन (दिए गए PDF की विधि के अनुसार)', samagri: LKB.samagri.slice(), steps: LKB.steps.map((x) => ({ ...x })), fromKB: true, prep: LKB.prep.slice(), do: [], dont: [], benefit: LKB.benefit };
+    if (i >= 0) POOJAS[i] = kbPooja; else POOJAS.push(kbPooja);
+  }
   POOJAS.forEach((p) => {
+    if (p.fromKB) return;                       // ज्ञान-आधार वाली पूजा में कुछ भी बाहर से नहीं जोड़ा जाता
     p.steps = कर्पूर_जोड़ें(p.steps);
     const m = META[p.id]; if (!m) return;
     p.prep = m.prep; p.do = m.do; p.dont = m.dont; p.benefit = m.benefit;

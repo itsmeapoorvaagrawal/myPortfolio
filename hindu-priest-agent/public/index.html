@@ -157,16 +157,17 @@
   <button id="send" class="primary">भेजें</button>
 </div>
 
+<script src="knowledge/lakshmi.js"></script>
 <script src="poojas.js"></script>
 <script src="mantras.js"></script>
 <script src="uccharan.js"></script>
 <script src="audiokey.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const S = { intro: false, asked: -1, ask: null, yajman: { name: '', gotra: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null, done: [], echo: null };
+const S = { intro: false, asked: -1, ask: null, yajman: { name: '', gotra: '', place: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null, done: [], echo: null };
 const synth = window.speechSynthesis;
 const poojaById = (id) => POOJAS.find((p) => p.id === id);
-const fill = (t) => t.replaceAll('{नाम}', S.yajman.name || 'यजमान').replaceAll('{गोत्र}', S.yajman.gotra || 'कश्यप');
+const fill = (t) => t.replaceAll('{नाम}', S.yajman.name || 'यजमान').replaceAll('{गोत्र}', S.yajman.gotra || 'कश्यप').replaceAll('{स्थान}', S.yajman.place || '');
 const setStatus = (t) => { $('status').textContent = t || ''; };
 const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
@@ -440,7 +441,7 @@ function renderStep() {
   $('bar').firstElementChild.style.width = ((S.step) / p.steps.length * 100) + '%';
   $('stInstr').textContent = fill(st.instruction);
   $('sloka').textContent = fill(st.sloka);
-  $('meaning').textContent = 'अर्थ: ' + st.meaning;
+  $('meaning').textContent = st.meaning ? 'अर्थ: ' + st.meaning : '';
 }
 
 // ---------- सामग्री एकत्र करवाना ----------
@@ -566,14 +567,14 @@ async function run() {
     }
     if (!await say(tok, fill(st.instruction))) return;
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
-    if ($('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
+    if (st.meaning && $('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
     if (st.echo && !await echoCheck(tok, st.echo)) return;
     if (!await wait(tok, st.wait || 3500)) return;
     S.step++;
   }
   S.phase = 'idle'; stageMode('off');
   S.done.push(p.name); S.pooja = null; S.pending = null;
-  const done = `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि और कोई पूजा करवानी हो, तो नाम बताइए।`;
+  const done = p.fromKB ? `यजमान, ${p.name} की विधि पूरी हुई। यदि और कोई पूजा करवानी हो, तो नाम बताइए।` : `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि और कोई पूजा करवानी हो, तो नाम बताइए।`;
   add('acharya', done); S.hist.push({ role: 'assistant', text: done }); showMenu();
   await say(tok, done);
   setStatus('अगली पूजा के लिए नाम बताइए');
@@ -623,7 +624,7 @@ async function handleUser(text, image) {
   } catch { S.offline = true; out = localReply(text); }
   if (myReq !== S.req) return;       // इस बीच यजमान ने फिर कुछ कहा; पुराना उत्तर छोड़ दें
   setStatus('');
-  if (out.yajman) { if (out.yajman.name) S.yajman.name = out.yajman.name; if (out.yajman.gotra) S.yajman.gotra = out.yajman.gotra; }
+  if (out.yajman) { if (out.yajman.name) S.yajman.name = out.yajman.name; if (out.yajman.gotra) S.yajman.gotra = out.yajman.gotra; if (out.yajman.place) S.yajman.place = out.yajman.place; }
   if (out.pooja_id && !S.pooja) S.pending = out.pooja_id;
   if (out.reply) { S.hist.push({ role: 'assistant', text: out.reply }); add('acharya', out.reply); }
   const tok = ++S.token;
