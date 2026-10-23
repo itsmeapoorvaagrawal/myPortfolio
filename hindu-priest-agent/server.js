@@ -252,7 +252,7 @@ http.createServer(async (req, res) => {
         const buf = await ttsAudio(text);
         res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'private, max-age=86400' });
         return res.end(buf);
-      } catch (e) { console.error(String(e.message).slice(0, 300)); res.writeHead(502); return res.end('tts failed'); }
+      } catch (e) { const msg = String(e.message).slice(0, 300); console.error(msg); res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' }); return res.end(msg); }
     }
     if (req.method === 'POST' && req.url === '/api/chat') {
       let body = '';

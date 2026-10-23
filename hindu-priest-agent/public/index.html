@@ -299,7 +299,7 @@ fetch('api/tts-mode').then((r) => r.json()).then((m) => { ttsOn = !!(m && m.enab
 const ttsCache = new Map();
 function ttsUrl(text) {
   if (!ttsCache.has(text)) ttsCache.set(text, fetch('api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
-    .then((r) => { if (!r.ok) throw new Error('tts ' + r.status); return r.blob(); }).then((b) => URL.createObjectURL(b))
+    .then(async (r) => { if (!r.ok) throw new Error('tts ' + r.status + ' ' + (await r.text()).slice(0, 160)); return r.blob(); }).then((b) => URL.createObjectURL(b))
     .catch((e) => { ttsCache.delete(text); throw e; }));
   return ttsCache.get(text);
 }
@@ -425,7 +425,7 @@ function say(tok, text, kind = 'talk') {
       return resolve(tok === S.token);
     }
     const parts = chunks(text);
-    const nextUrl = (i) => (ttsOn && parts[i] ? ttsUrl(parts[i]).catch(() => null) : Promise.resolve(null));
+    const nextUrl = (i) => (ttsOn && parts[i] ? ttsUrl(parts[i]).catch((e) => { console.warn('हॉस्टेड आवाज़ विफल, ब्राउज़र की आवाज़ चलेगी:', e.message); setStatus('⚠ हॉस्टेड आवाज़ नहीं चली: ' + e.message.slice(0, 90)); return null; }) : Promise.resolve(null));
     let pending = nextUrl(0);
     for (let i = 0; i < parts.length; i++) {
       if (tok !== S.token) return resolve(false);
@@ -435,6 +435,7 @@ function say(tok, text, kind = 'talk') {
       if (url) {
         const r = await playClip(tok, url, 1);
         if (r !== 'err') { if (!r) return resolve(false); continue; }
+        console.warn('हॉस्टेड आवाज़ की ऑडियो फ़ाइल नहीं चली (शायद ब्राउज़र ने आवाज़ रोकी)');
       }
       await speakOne(parts[i], base, pitch);
     }
