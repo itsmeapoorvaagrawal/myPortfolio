@@ -8,23 +8,38 @@ const MANTRAS = require('./public/mantras.js');
 const RAG = require('./public/rag.js');
 const AUDIOKEY = require('./public/audiokey.js');
 
-// ElevenLabs की आवाज़ (वैकल्पिक): ELEVENLABS_API_KEY और ELEVENLABS_VOICE_ID सेट हों तो आचार्य जी की बोली इसी से बनती है।
-// कुंजी केवल पर्यावरण-चर में रखें, कोड या चैट में नहीं। सेट न हो तो ब्राउज़र की आवाज़ चलती है।
-const TTS = { key: process.env.ELEVENLABS_API_KEY || '', voice: process.env.ELEVENLABS_VOICE_ID || '', model: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2' };
+// हॉस्टेड आवाज़ (वैकल्पिक): आचार्य जी की बोली इससे बनती है। कुंजी केवल पर्यावरण-चर में रखें, कोड या चैट में नहीं।
+//   Google:      GOOGLE_TTS_API_KEY (और चाहें तो GOOGLE_TTS_VOICE, जैसे hi-IN-Chirp3-HD-Charon)
+//   ElevenLabs:  ELEVENLABS_API_KEY और ELEVENLABS_VOICE_ID
+// दोनों हों तो Google चलती है। कुछ न हो, या कॉल विफल हो, तो ब्राउज़र की आवाज़ चलती है।
+const TTS = process.env.GOOGLE_TTS_API_KEY
+  ? { name: 'google', key: process.env.GOOGLE_TTS_API_KEY, voice: process.env.GOOGLE_TTS_VOICE || 'hi-IN-Chirp3-HD-Charon', model: '' }
+  : { name: 'elevenlabs', key: process.env.ELEVENLABS_API_KEY || '', voice: process.env.ELEVENLABS_VOICE_ID || '', model: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2' };
 const ttsEnabled = () => !!(TTS.key && TTS.voice);
 const TTS_DIR = path.join(__dirname, '.tts-cache');
 const ttsInflight = new Map();
+async function ttsFetch(text) {
+  if (TTS.name === 'google') {
+    const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
+      method: 'POST', headers: { 'x-goog-api-key': TTS.key, 'content-type': 'application/json' },
+      body: JSON.stringify({ input: { text }, voice: { languageCode: 'hi-IN', name: TTS.voice }, audioConfig: { audioEncoding: 'MP3' } }),
+    });
+    if (!r.ok) throw new Error('Google TTS ' + r.status + ' ' + (await r.text()).slice(0, 200));
+    return Buffer.from((await r.json()).audioContent, 'base64');
+  }
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(TTS.voice) + '?output_format=mp3_44100_64', {
+    method: 'POST', headers: { 'xi-api-key': TTS.key, 'content-type': 'application/json', accept: 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: TTS.model, language_code: 'hi' }),
+  });
+  if (!r.ok) throw new Error('ElevenLabs ' + r.status + ' ' + (await r.text()).slice(0, 200));
+  return Buffer.from(await r.arrayBuffer());
+}
 async function ttsAudio(text) {
-  const file = path.join(TTS_DIR, AUDIOKEY.key(TTS.voice + '|' + TTS.model + '|' + text) + '.mp3');
+  const file = path.join(TTS_DIR, AUDIOKEY.key(TTS.name + '|' + TTS.voice + '|' + TTS.model + '|' + text) + '.mp3');
   if (fs.existsSync(file)) return fs.readFileSync(file);
   if (!ttsInflight.has(file)) {
     ttsInflight.set(file, (async () => {
-      const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(TTS.voice) + '?output_format=mp3_44100_64', {
-        method: 'POST', headers: { 'xi-api-key': TTS.key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-        body: JSON.stringify({ text, model_id: TTS.model, language_code: 'hi' }),
-      });
-      if (!r.ok) throw new Error('ElevenLabs ' + r.status + ' ' + (await r.text()).slice(0, 200));
-      const buf = Buffer.from(await r.arrayBuffer());
+      const buf = await ttsFetch(text);
       fs.mkdirSync(TTS_DIR, { recursive: true }); fs.writeFileSync(file, buf);
       return buf;
     })().finally(() => ttsInflight.delete(file)));
