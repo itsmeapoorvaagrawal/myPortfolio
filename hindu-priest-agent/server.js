@@ -5,6 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const POOJAS = require('./public/poojas.js');
 const MANTRAS = require('./public/mantras.js');
+const RAG = require('./public/rag.js');
+// लक्ष्मी पूजन का ज्ञान-आधार (PDF)। न मिले तो यह सुविधा बंद रहती है।
+let LKB = null; try { LKB = require('./public/knowledge/lakshmi.js'); } catch (e) { LKB = null; }
+const kbChunks = (kb) => [
+  { id: 'intro', page: 1, title: 'भूमिका: पूजा का समय और फल', text: kb.intro },
+  { id: 'samagri', page: 1, title: 'पूजन के लिए ज़रूरी सामग्री', text: kb.samagri.join(', ') },
+  ...kb.steps.map((st, i) => ({ id: 'step' + (i + 1), page: st.page, step: i + 1, title: st.title, text: [st.instruction, st.sloka].filter(Boolean).join(' ') })),
+];
+const lakshmiChunks = LKB ? kbChunks(LKB) : [];
+const lakshmiIndex = LKB ? RAG.build(lakshmiChunks) : null;
+const lakshmiOverview = LKB ? LKB.steps.map((st, i) => (i + 1) + '. ' + st.title).join('; ') : '';
 
 const PORT = process.env.PORT || 3000;
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
@@ -36,9 +47,18 @@ ${poojaList}
 ${mantraCatalog}
 - यजमान किसी देवता के मंत्र, श्लोक या स्तोत्र सुनना चाहे, या किसी एक मंत्र को सुनाने को कहे, या पूछे कि कौन-कौन से मंत्र उपलब्ध हैं, तो intent "library" दो। "library": {"deity": "देवता_id या null", "mantra": "मंत्र_id या null"} भरो। देवता पता न हो तो दोनों null रखो। यह पूजा चल रही हो तब भी लागू है।
 - reply में केवल एक छोटा वाक्य कहो, जैसे "जी यजमान, गणेश जी के मंत्र खोलता हूँ।" सूची खुद मत गिनाओ, सिस्टम स्क्रीन पर दिखाएगा और नाम बोलेगा।
-- जो मंत्र इस संग्रह में नहीं है, उसके बारे में मना करो कि वह मेरे संग्रह में नहीं है, और संग्रह के निकटतम मंत्र का सुझाव दो। अपनी ओर से श्लोक मत गढ़ो।
+- जो मंत्र इस संग्रह में नहीं है, उसके बारे में मना करो कि वह मेरे संग्रह में नहीं है, और संग्रह के निकटतम मंत्र का सुझाव दो (यह सुझाव लक्ष्मी पूजन चलते समय मत दो)। अपनी ओर से श्लोक मत गढ़ो।
 - यजमान किसी मंत्र को बार-बार या कुछ देर तक सुनना चाहे, जैसे "ॐ नमः शिवाय 108 बार सुनाओ" या "गणेश मंत्र दस मिनट सुनाओ", तो "library" में "count" (बार की संख्या, जैसे 11, 21, 51, 108) या "minutes" (मिनट) भी भरो। दोनों में से जो बताया गया हो वही भरो, बाकी null। संख्या मंत्र_id के साथ ही भरो। संख्या शब्दों में हो ("इक्यावन", "एक सौ आठ") तो अंकों में बदलकर भरो। मंत्र साफ़ न हो तो पूछ लो और intent "clarify" रखो।
 - पूजा करवाने की माँग (जैसे "गणेश पूजन करवाना है") और मंत्र सुनने की माँग (जैसे "गणेश जी का मंत्र सुनाओ") अलग हैं। पहली पर "start" और दूसरी पर "library" दो।
+
+## दस्तावेज़-आधारित लक्ष्मी पूजन (pooja_id: lakshmi)
+लक्ष्मी पूजन (दीपावली पूजन) केवल एक दिए गए दस्तावेज़ (PDF) की विधि से होता है। जब यजमान लक्ष्मी या दीपावली पूजन के बारे में कुछ पूछे, या वह पूजा चल रही हो, तब संदेश के साथ "दस्तावेज़ के अंश" और पूजा का पूरा क्रम दिया जाएगा। इन नियमों का पालन करो:
+- लक्ष्मी पूजन की कोई भी विधि, क्रम, सामग्री, मंत्र या निर्देश केवल दिए गए अंशों से बताओ। अपनी याददाश्त या सामान्य ज्ञान से कुछ मत जोड़ो, मत बदलो और क्रम मत बदलो।
+- जो बात दिए गए अंशों में नहीं है, उसके बारे में केवल इतना कहो: "यह पूजा-विधि के दस्तावेज़ में नहीं दिया गया है।" कोई अनुमान, सुझाव या विकल्प मत दो।
+- दस्तावेज़ में मंत्रों के अर्थ नहीं दिए गए हैं। अर्थ पूछने पर यही बताओ कि दस्तावेज़ में अर्थ नहीं दिया गया है।
+- लक्ष्मी पूजन चुने जाने पर यजमान का नाम, गोत्र और अपने नगर या गाँव का नाम पूछो, क्योंकि दस्तावेज़ के संकल्प में तीनों माँगे गए हैं। तीनों मिलने पर ही intent "start" दो। "yajman" में "place" भी भरो।
+- "दीपावली पूजा", "दिवाली पूजन", "लक्ष्मी-गणेश पूजन" सब का अर्थ pooja_id "lakshmi" है।
+- लक्ष्मी पूजन के दौरान दस्तावेज़ से बाहर की कोई चीज़ मत सुझाओ: न मंत्र संग्रह का कोई मंत्र या आरती, न कोई दूसरा मंत्र, पाठ, विकल्प या सलाह। जैसे आरती या श्री सूक्त का पाठ दस्तावेज़ में न हो तो केवल कहो कि दस्तावेज़ में नहीं दिया गया है। यजमान खुद मंत्र संग्रह खोलने या किसी मंत्र को सुनाने को कहे, तभी intent "library" दो।
 
 ## सूची से बाहर की पूजा
 यजमान कोई भी अन्य प्रामाणिक हिंदू पूजा, व्रत या अनुष्ठान माँगे (जैसे सरस्वती, विष्णु, राम, कृष्ण, संतोषी माता, कार्तिकेय, काल भैरव, नवग्रह, वास्तु, गृह प्रवेश, तुलसी, छठ, आदि) तो मना मत करो। pooja_id null रखो और "custom" भरो, ताकि सिस्टम मानक पूजा-ढाँचे में उसे जोड़ दे।
@@ -54,7 +74,7 @@ custom का प्रारूप: {"name": "पूजा का नाम", "
 
 ## आउटपुट का प्रारूप
 केवल एक JSON ऑब्जेक्ट लौटाओ, उसके बाहर कुछ नहीं:
-{"reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null"}}
+{"reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null", "place": "नगर या गाँव, या null"}}
 intent का अर्थ: chat = सामान्य बातचीत, clarify = स्पष्टीकरण या जानकारी चाहिए, start = पूजा शुरू करो, resume = पूजा जहाँ रुकी थी वहीं से चालू करो (पूजा चल रही या रुकी हो और टोकने का उत्तर पूरा हो गया), repeat = वर्तमान चरण दोबारा, next = अगला चरण, ready = सामग्री तैयार है, पूजा शुरू करो, stop = पूजा समाप्त, library = मंत्र संग्रह खोलो।
 intent "clarify" केवल तब रखो जब reply के अंत में तुम यजमान से कोई प्रश्न पूछ रहे हो। टोकने का उत्तर पूरा देकर पूजा आगे बढ़ाने की बात कहो तो intent "resume" रखो। intent "start" तभी दो जब reply में कहो कि अब पूजा आरंभ करते हैं, "तैयार हो तो कहिए" जैसा प्रश्न न पूछो।
 टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
@@ -65,9 +85,10 @@ function stateText(state) {
   return `## वर्तमान स्थिति
 यजमान का नाम: ${state.yajman?.name || 'अभी पता नहीं'}
 यजमान का गोत्र: ${state.yajman?.gotra || 'अभी पता नहीं'}
+यजमान का नगर या गाँव: ${state.yajman?.place || 'अभी पता नहीं'}
 चुनी हुई या प्रतीक्षित पूजा: ${state.pending || (cur ? cur.id : 'कोई नहीं')}
 पूजा की स्थिति: ${state.phase}
-${cur && step ? `वर्तमान चरण: ${state.step + 1}/${cur.steps.length} — ${step.title}\nइस चरण का मंत्र: ${step.sloka}\nइस चरण का अर्थ: ${step.meaning}` : ''}
+${cur && step ? `वर्तमान चरण: ${state.step + 1}/${cur.steps.length} — ${step.title}\nइस चरण का मंत्र: ${step.sloka}\n${step.meaning ? '\nइस चरण का अर्थ: ' + step.meaning : ''}` : ''}
 ${(state.done && state.done.length) ? `संपन्न हो चुकी पूजाएँ: ${state.done.join(', ')}` : ''}
 ${state.phase === 'samagri' ? 'यजमान से सामग्री एकत्र करने को कहा गया है और पूजा आरंभ नहीं हुई। यजमान कहे कि सब तैयार है, तभी intent "ready" दो। सामग्री के बारे में प्रश्न हो (कुछ कम है, विकल्प क्या है) तो उत्तर दो और intent "chat" रखो। जो चीज़ न मिले उसका उचित शास्त्रीय विकल्प बताओ, जैसे घी न हो तो तेल का दीपक, पुष्प न हों तो अक्षत।' : ''}
 ${state.phase === 'interrupted' ? 'यजमान ने पूजा के बीच में टोका है। नियम तीन का पालन करो।' : ''}`;
@@ -137,7 +158,17 @@ async function chat({ messages, image, state }) {
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   const last = msgs[msgs.length - 1];
   if (!last || last.role !== 'user') return { reply: FALLBACK, intent: 'chat' };
+  const userText = last.content;
   last.content = stateText(state) + '\n\nयजमान का नया संदेश: ' + last.content;
+  // लक्ष्मी पूजन: दस्तावेज़ में खोजकर सबसे संबंधित अंश संदेश के साथ देना (RAG)
+  if (lakshmiIndex && (state.pooja === 'lakshmi' || state.pending === 'lakshmi' || /लक्ष्मी|दिवाली|दीवाली|दीपावली/.test(userText))) {
+    const cur = state.pooja === 'lakshmi' && LKB.steps[state.step] ? { n: state.step + 1, st: LKB.steps[state.step] } : null;
+    const hits = RAG.search(lakshmiIndex, userText + (cur ? ' ' + cur.st.title : ''), 4).map((h) => h.chunk);
+    if (cur && !hits.some((c) => c.step === cur.n)) hits.unshift(lakshmiChunks.find((c) => c.step === cur.n));   // चल रहा चरण हमेशा
+    const ctx = hits.filter(Boolean).map((c) => `[पृष्ठ ${c.page}: ${c.title}] ${c.text}`).join('\n');
+    last.content = '## दस्तावेज़ के अंश (केवल इन्हीं के आधार पर लक्ष्मी पूजन की बात बताओ)\n' + (ctx || '(इस प्रश्न से मेल खाता कोई अंश नहीं मिला)')
+      + '\n\n## पूजा का पूरा क्रम (दस्तावेज़ के अनुसार)\n' + lakshmiOverview + '\n\n' + last.content;
+  }
   let convo = msgs;
   for (let attempt = 0; attempt < 2; attempt++) {
     const text = await callClaude(system, convo, image);
