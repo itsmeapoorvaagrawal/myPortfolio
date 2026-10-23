@@ -245,7 +245,7 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/api/tts-check') {         // ब्राउज़र में खोलकर परखने के लिए: हॉस्टेड आवाज़ चल रही है या क्यों नहीं
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
       if (!ttsEnabled()) return res.end('बंद है: ' + (TTS.name === 'google' ? 'GOOGLE_TTS_VOICE' : 'ELEVENLABS_API_KEY और ELEVENLABS_VOICE_ID') + ' सर्वर को नहीं मिले। उसी विंडो में सेट करके node server.js चलाइए।');
-      try { const buf = await ttsAudio('नमस्ते यजमान।'); return res.end(`ठीक है ✅ ${TTS.name} (${TTS.voice}) से ${buf.length} बाइट की आवाज़ बनी।`); }
+      try { const buf = await ttsFetch('नमस्ते।'); return res.end(`ठीक है ✅ ${TTS.name} (${TTS.voice}) से ${buf.length} बाइट की आवाज़ बनी।`); }
       catch (e) { return res.end('विफल ❌ ' + TTS.name + ' (' + TTS.voice + ')\n\n' + String(e.message).slice(0, 600)); }
     }
     if (req.method === 'POST' && req.url === '/api/tts') {
