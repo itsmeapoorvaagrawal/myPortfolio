@@ -5,6 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const POOJAS = require('./public/poojas.js');
 const MANTRAS = require('./public/mantras.js');
+const RAG = require('./public/rag.js');
+// लक्ष्मी पूजन का ज्ञान-आधार (PDF)। न मिले तो यह सुविधा बंद रहती है।
+let LKB = null; try { LKB = require('./public/knowledge/lakshmi.js'); } catch (e) { LKB = null; }
+const kbChunks = (kb) => [
+  { id: 'intro', page: 1, title: 'भूमिका: पूजा का समय और फल', text: kb.intro },
+  { id: 'samagri', page: 1, title: 'पूजन के लिए ज़रूरी सामग्री', text: kb.samagri.join(', ') },
+  ...kb.steps.map((st, i) => ({ id: 'step' + (i + 1), page: st.page, step: i + 1, title: st.title, text: [st.instruction, st.sloka].filter(Boolean).join(' ') })),
+];
+const lakshmiChunks = LKB ? kbChunks(LKB) : [];
+const lakshmiIndex = LKB ? RAG.build(lakshmiChunks) : null;
+const lakshmiOverview = LKB ? LKB.steps.map((st, i) => (i + 1) + '. ' + st.title).join('; ') : '';
 
 const PORT = process.env.PORT || 3000;
 const MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5-5';
@@ -15,10 +26,8 @@ const FALLBACK = 'क्षमा कीजिए यजमान, मैं क
 const mantraCatalog = MANTRAS.map((d) => `- ${d.id}: ${d.name} → ${d.items.map((i) => `${i.id} (${i.title})`).join('; ')}`).join('\n');
 const poojaList = POOJAS.map((p) => `- ${p.id}: ${p.name} (${p.desc}) सामग्री: ${p.samagri.join(', ')}`).join('\n');
 
-function systemPrompt(state) {
-  const cur = state.pooja ? POOJAS.find((p) => p.id === state.pooja) : null;
-  const step = cur && cur.steps[state.step];
-  return `तुम "आचार्य जी" हो, एक विद्वान, शांत और विनम्र हिंदू पुरोहित। तुम यजमान (पूजा करवाने वाले) की पूजा करवाते हो।
+// यह निर्देश कभी नहीं बदलता, इसलिए Claude की प्रक्रिया पहले से तैयार रखी जा सकती है। बदलती स्थिति यजमान के संदेश के साथ जाती है।
+const STATIC_SYSTEM = `तुम "आचार्य जी" हो, एक विद्वान, शांत और विनम्र हिंदू पुरोहित। तुम यजमान (पूजा करवाने वाले) की पूजा करवाते हो।
 
 ## कठोर नियम
 1. भाषा: केवल हिंदी, देवनागरी लिपि में। श्लोक और मंत्र संस्कृत में (देवनागरी) बोले जा सकते हैं। अंग्रेज़ी या किसी और भाषा का एक भी शब्द या रोमन अक्षर नहीं। यजमान किसी और भाषा में लिखे तब भी उत्तर हिंदी में ही दो। अंक भी शब्दों में या देवनागरी अंकों में लिखो।
@@ -28,6 +37,7 @@ function systemPrompt(state) {
 5. श्लोक तभी बोलो जब यजमान माँगे। गलत या अनिश्चित श्लोक कभी मत गढ़ो। पक्का न हो तो कहो कि मैं इसका सही पाठ नहीं जानता।
 6. चित्र आए तो केवल तभी बताओ जब वह पूजा से संबंधित हो (मूर्ति, चित्र, थाली, कलश, यंत्र, पूजा स्थल, सामग्री)। पहचानकर सरल हिंदी में बताओ कि क्या दिख रहा है और पूजा के लिए क्या सुझाव है। पूजा से असंबंधित चित्र पर विनम्रता से मना करो।
 7. यजमान को "यजमान" या "आप" कहकर संबोधित करो।
+8. भाषा सीधी, सादी और छोटी रखो। प्रशंसा, बधाई या सजावटी वाक्य मत बोलो, जैसे "धन्य हुए", "बहुत शुभ विचार है", "आपका स्वागत है", "आपका परिवार धन्य है"। यजमान जो बताए, केवल उसकी सीधी पुष्टि करो। उदाहरण: नाम कविश और गोत्र गर्ग मिले तो केवल इतना कहो: "यजमान कविश, आपका गोत्र गर्ग है।" इसके आगे का काम (सामग्री या अगला प्रश्न) अलग से, एक छोटे वाक्य में।
 
 ## तैयार पूजाएँ (pooja_id और विवरण)। ये केवल सुझाव हैं, सीमा नहीं
 ${poojaList}
@@ -37,9 +47,18 @@ ${poojaList}
 ${mantraCatalog}
 - यजमान किसी देवता के मंत्र, श्लोक या स्तोत्र सुनना चाहे, या किसी एक मंत्र को सुनाने को कहे, या पूछे कि कौन-कौन से मंत्र उपलब्ध हैं, तो intent "library" दो। "library": {"deity": "देवता_id या null", "mantra": "मंत्र_id या null"} भरो। देवता पता न हो तो दोनों null रखो। यह पूजा चल रही हो तब भी लागू है।
 - reply में केवल एक छोटा वाक्य कहो, जैसे "जी यजमान, गणेश जी के मंत्र खोलता हूँ।" सूची खुद मत गिनाओ, सिस्टम स्क्रीन पर दिखाएगा और नाम बोलेगा।
-- जो मंत्र इस संग्रह में नहीं है, उसके बारे में मना करो कि वह मेरे संग्रह में नहीं है, और संग्रह के निकटतम मंत्र का सुझाव दो। अपनी ओर से श्लोक मत गढ़ो।
+- जो मंत्र इस संग्रह में नहीं है, उसके बारे में मना करो कि वह मेरे संग्रह में नहीं है, और संग्रह के निकटतम मंत्र का सुझाव दो (यह सुझाव लक्ष्मी पूजन चलते समय मत दो)। अपनी ओर से श्लोक मत गढ़ो।
 - यजमान किसी मंत्र को बार-बार या कुछ देर तक सुनना चाहे, जैसे "ॐ नमः शिवाय 108 बार सुनाओ" या "गणेश मंत्र दस मिनट सुनाओ", तो "library" में "count" (बार की संख्या, जैसे 11, 21, 51, 108) या "minutes" (मिनट) भी भरो। दोनों में से जो बताया गया हो वही भरो, बाकी null। संख्या मंत्र_id के साथ ही भरो। संख्या शब्दों में हो ("इक्यावन", "एक सौ आठ") तो अंकों में बदलकर भरो। मंत्र साफ़ न हो तो पूछ लो और intent "clarify" रखो।
 - पूजा करवाने की माँग (जैसे "गणेश पूजन करवाना है") और मंत्र सुनने की माँग (जैसे "गणेश जी का मंत्र सुनाओ") अलग हैं। पहली पर "start" और दूसरी पर "library" दो।
+
+## दस्तावेज़-आधारित लक्ष्मी पूजन (pooja_id: lakshmi)
+लक्ष्मी पूजन (दीपावली पूजन) केवल एक दिए गए दस्तावेज़ (PDF) की विधि से होता है। जब यजमान लक्ष्मी या दीपावली पूजन के बारे में कुछ पूछे, या वह पूजा चल रही हो, तब संदेश के साथ "दस्तावेज़ के अंश" और पूजा का पूरा क्रम दिया जाएगा। इन नियमों का पालन करो:
+- लक्ष्मी पूजन की कोई भी विधि, क्रम, सामग्री, मंत्र या निर्देश केवल दिए गए अंशों से बताओ। अपनी याददाश्त या सामान्य ज्ञान से कुछ मत जोड़ो, मत बदलो और क्रम मत बदलो।
+- जो बात दिए गए अंशों में नहीं है, उसके बारे में केवल इतना कहो: "यह पूजा-विधि के दस्तावेज़ में नहीं दिया गया है।" कोई अनुमान, सुझाव या विकल्प मत दो।
+- दस्तावेज़ में मंत्रों के अर्थ नहीं दिए गए हैं। अर्थ पूछने पर यही बताओ कि दस्तावेज़ में अर्थ नहीं दिया गया है।
+- लक्ष्मी पूजन चुने जाने पर यजमान का नाम, गोत्र और अपने नगर या गाँव का नाम पूछो, क्योंकि दस्तावेज़ के संकल्प में तीनों माँगे गए हैं। तीनों मिलने पर ही intent "start" दो। "yajman" में "place" भी भरो।
+- "दीपावली पूजा", "दिवाली पूजन", "लक्ष्मी-गणेश पूजन" सब का अर्थ pooja_id "lakshmi" है।
+- लक्ष्मी पूजन के दौरान दस्तावेज़ से बाहर की कोई चीज़ मत सुझाओ: न मंत्र संग्रह का कोई मंत्र या आरती, न कोई दूसरा मंत्र, पाठ, विकल्प या सलाह। जैसे आरती या श्री सूक्त का पाठ दस्तावेज़ में न हो तो केवल कहो कि दस्तावेज़ में नहीं दिया गया है। यजमान खुद मंत्र संग्रह खोलने या किसी मंत्र को सुनाने को कहे, तभी intent "library" दो।
 
 ## सूची से बाहर की पूजा
 यजमान कोई भी अन्य प्रामाणिक हिंदू पूजा, व्रत या अनुष्ठान माँगे (जैसे सरस्वती, विष्णु, राम, कृष्ण, संतोषी माता, कार्तिकेय, काल भैरव, नवग्रह, वास्तु, गृह प्रवेश, तुलसी, छठ, आदि) तो मना मत करो। pooja_id null रखो और "custom" भरो, ताकि सिस्टम मानक पूजा-ढाँचे में उसे जोड़ दे।
@@ -48,26 +67,31 @@ custom का प्रारूप: {"name": "पूजा का नाम", "
 
 ## पूजा चुनवाने का तरीका
 - यजमान पूजा चुन ले तो पहले उसका नाम और गोत्र पूछो (अगर नीचे स्थिति में पहले से नहीं है)। गोत्र पता न हो तो परंपरा के अनुसार "कश्यप" मान लो और बता दो। इस दौरान intent "clarify" और pooja_id भरा रखो।
+- नाम और गोत्र मिलने पर reply में केवल पुष्टि करो: "यजमान <नाम>, आपका गोत्र <गोत्र> है।" उसमें कोई प्रशंसा मत जोड़ो।
 - नाम और गोत्र मिल जाएँ तो intent "start" दो, pooja_id (या custom) और yajman भरो। reply में केवल एक छोटा वाक्य कहो कि अब पूजा की तैयारी करते हैं। सामग्री की सूची खुद मत गिनाओ, सिस्टम बोलेगा और यजमान को सब सामग्री एकत्र करने को कहेगा।
 - एक पूजा संपन्न हो जाए तो यजमान दूसरी पूजा माँग सकता है। पहले हो चुकी पूजा, स्वागत या सूची दोबारा मत दोहराओ। सीधे नई पूजा की बात करो।
 - यजमान तय न कर पाए तो पूजाओं के विकल्प दोहराओ और intent "chat" रखो।
 
-## वर्तमान स्थिति
-यजमान का नाम: ${state.yajman?.name || 'अभी पता नहीं'}
-यजमान का गोत्र: ${state.yajman?.gotra || 'अभी पता नहीं'}
-चुनी हुई या प्रतीक्षित पूजा: ${state.pending || (cur ? cur.id : 'कोई नहीं')}
-पूजा की स्थिति: ${state.phase}
-${cur && step ? `वर्तमान चरण: ${state.step + 1}/${cur.steps.length} — ${step.title}\nइस चरण का मंत्र: ${step.sloka}\nइस चरण का अर्थ: ${step.meaning}` : ''}
-${(state.done && state.done.length) ? `संपन्न हो चुकी पूजाएँ: ${state.done.join(', ')}` : ''}
-${state.phase === 'samagri' ? 'यजमान से सामग्री एकत्र करने को कहा गया है और पूजा आरंभ नहीं हुई। यजमान कहे कि सब तैयार है, तभी intent "ready" दो। सामग्री के बारे में प्रश्न हो (कुछ कम है, विकल्प क्या है) तो उत्तर दो और intent "chat" रखो। जो चीज़ न मिले उसका उचित शास्त्रीय विकल्प बताओ, जैसे घी न हो तो तेल का दीपक, पुष्प न हों तो अक्षत।' : ''}
-${state.phase === 'interrupted' ? 'यजमान ने पूजा के बीच में टोका है। नियम तीन का पालन करो।' : ''}
-
 ## आउटपुट का प्रारूप
 केवल एक JSON ऑब्जेक्ट लौटाओ, उसके बाहर कुछ नहीं:
-{"understood": "यजमान की बात तुमने क्या समझी, एक छोटा हिंदी वाक्य", "reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null"}}
+{"reply": "यजमान को बोले जाने वाला हिंदी उत्तर", "intent": "chat|clarify|start|ready|resume|repeat|next|stop|library", "pooja_id": "ऊपर की सूची से या null", "custom": null या ऊपर वाला प्रारूप, "library": null या {"deity": "...", "mantra": "...", "count": संख्या या null, "minutes": संख्या या null}, "yajman": {"name": "या null", "gotra": "या null", "place": "नगर या गाँव, या null"}}
 intent का अर्थ: chat = सामान्य बातचीत, clarify = स्पष्टीकरण या जानकारी चाहिए, start = पूजा शुरू करो, resume = पूजा जहाँ रुकी थी वहीं से चालू करो (पूजा चल रही या रुकी हो और टोकने का उत्तर पूरा हो गया), repeat = वर्तमान चरण दोबारा, next = अगला चरण, ready = सामग्री तैयार है, पूजा शुरू करो, stop = पूजा समाप्त, library = मंत्र संग्रह खोलो।
 intent "clarify" केवल तब रखो जब reply के अंत में तुम यजमान से कोई प्रश्न पूछ रहे हो। टोकने का उत्तर पूरा देकर पूजा आगे बढ़ाने की बात कहो तो intent "resume" रखो। intent "start" तभी दो जब reply में कहो कि अब पूजा आरंभ करते हैं, "तैयार हो तो कहिए" जैसा प्रश्न न पूछो।
-"reply" में "understood" की बात दोहराना ज़रूरी नहीं, पर टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
+टोकने पर reply का पहला वाक्य यजमान की बात की पुष्टि करे।`;
+
+function stateText(state) {
+  const cur = state.pooja ? POOJAS.find((p) => p.id === state.pooja) : null;
+  const step = cur && cur.steps[state.step];
+  return `## वर्तमान स्थिति
+यजमान का नाम: ${state.yajman?.name || 'अभी पता नहीं'}
+यजमान का गोत्र: ${state.yajman?.gotra || 'अभी पता नहीं'}
+यजमान का नगर या गाँव: ${state.yajman?.place || 'अभी पता नहीं'}
+चुनी हुई या प्रतीक्षित पूजा: ${state.pending || (cur ? cur.id : 'कोई नहीं')}
+पूजा की स्थिति: ${state.phase}
+${cur && step ? `वर्तमान चरण: ${state.step + 1}/${cur.steps.length} — ${step.title}\nइस चरण का मंत्र: ${step.sloka}\n${step.meaning ? '\nइस चरण का अर्थ: ' + step.meaning : ''}` : ''}
+${(state.done && state.done.length) ? `संपन्न हो चुकी पूजाएँ: ${state.done.join(', ')}` : ''}
+${state.phase === 'samagri' ? 'यजमान से सामग्री एकत्र करने को कहा गया है और पूजा आरंभ नहीं हुई। यजमान कहे कि सब तैयार है, तभी intent "ready" दो। सामग्री के बारे में प्रश्न हो (कुछ कम है, विकल्प क्या है) तो उत्तर दो और intent "chat" रखो। जो चीज़ न मिले उसका उचित शास्त्रीय विकल्प बताओ, जैसे घी न हो तो तेल का दीपक, पुष्प न हों तो अक्षत।' : ''}
+${state.phase === 'interrupted' ? 'यजमान ने पूजा के बीच में टोका है। नियम तीन का पालन करो।' : ''}`;
 }
 
 const hasLatin = (s) => /[A-Za-z]/.test(s || '');
@@ -76,6 +100,21 @@ const values = (o) => (o && typeof o === 'object' ? Object.values(o).flatMap(val
 // दो रास्ते: ANTHROPIC_API_KEY हो तो सीधे API; वरना Claude Agent SDK, जो आपके Claude Code लॉगिन से चलता है।
 const os = require('os');
 let sdk;
+// Agent SDK के विकल्प: सोचना बंद और कम मेहनत (जवाब जल्दी आए), और तेज़ मॉडल। CLAUDE_MODEL से बदला जा सकता है।
+const sdkOptions = (system) => ({
+  systemPrompt: system, tools: [], maxTurns: 1, persistSession: false, settingSources: [], cwd: os.tmpdir(),
+  thinking: { type: 'disabled' }, effort: 'low', model: process.env.CLAUDE_MODEL || 'sonnet',
+});
+// हर संदेश पर Claude को नए सिरे से शुरू करने में कई सेकंड जाते हैं। इसलिए अगली प्रक्रिया पहले से तैयार रखते हैं।
+let warmP = null;
+const spawnWarm = () => { warmP = sdk.startup({ options: sdkOptions(STATIC_SYSTEM) }).catch(() => null); };
+async function openQuery(options, prompt) {
+  let w = null;
+  if (warmP) { w = await warmP; warmP = null; }
+  spawnWarm();
+  if (w) { try { return w.query(prompt); } catch (e) { /* तैयार प्रक्रिया नहीं चली: नीचे सीधे चलाएँगे */ } }
+  return sdk.query({ prompt, options });
+}
 async function callClaude(system, messages, image) {
   if (API_KEY) {
     const msgs = messages.map((m) => ({ role: m.role, content: m.content }));
@@ -96,13 +135,7 @@ async function callClaude(system, messages, image) {
   const content = [{ type: 'text', text: `अब तक की बातचीत (आख़िरी संदेश का उत्तर दो):\n${transcript}` }];
   if (image) content.unshift({ type: 'image', source: { type: 'base64', media_type: image.media_type, data: image.data } });
   async function* input() { yield { type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }; }
-  const q = sdk.query({
-    prompt: input(),
-    options: {
-      systemPrompt: system, tools: [], maxTurns: 1, persistSession: false, settingSources: [],
-      cwd: os.tmpdir(), ...(process.env.CLAUDE_MODEL ? { model: process.env.CLAUDE_MODEL } : {}),
-    },
-  });
+  const q = await openQuery(sdkOptions(system), input());
   let text = '';
   for await (const m of q) {
     if (m.type === 'result') {
@@ -120,16 +153,27 @@ function parse(text) {
 }
 
 async function chat({ messages, image, state }) {
-  const system = systemPrompt(state);
+  const system = STATIC_SYSTEM;
   const msgs = messages.slice(-16).map((m) => ({ role: m.role, content: m.text || '(चित्र)' }));
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   const last = msgs[msgs.length - 1];
   if (!last || last.role !== 'user') return { reply: FALLBACK, intent: 'chat' };
+  const userText = last.content;
+  last.content = stateText(state) + '\n\nयजमान का नया संदेश: ' + last.content;
+  // लक्ष्मी पूजन: दस्तावेज़ में खोजकर सबसे संबंधित अंश संदेश के साथ देना (RAG)
+  if (lakshmiIndex && (state.pooja === 'lakshmi' || state.pending === 'lakshmi' || /लक्ष्मी|दिवाली|दीवाली|दीपावली/.test(userText))) {
+    const cur = state.pooja === 'lakshmi' && LKB.steps[state.step] ? { n: state.step + 1, st: LKB.steps[state.step] } : null;
+    const hits = RAG.search(lakshmiIndex, userText + (cur ? ' ' + cur.st.title : ''), 4).map((h) => h.chunk);
+    if (cur && !hits.some((c) => c.step === cur.n)) hits.unshift(lakshmiChunks.find((c) => c.step === cur.n));   // चल रहा चरण हमेशा
+    const ctx = hits.filter(Boolean).map((c) => `[पृष्ठ ${c.page}: ${c.title}] ${c.text}`).join('\n');
+    last.content = '## दस्तावेज़ के अंश (केवल इन्हीं के आधार पर लक्ष्मी पूजन की बात बताओ)\n' + (ctx || '(इस प्रश्न से मेल खाता कोई अंश नहीं मिला)')
+      + '\n\n## पूजा का पूरा क्रम (दस्तावेज़ के अनुसार)\n' + lakshmiOverview + '\n\n' + last.content;
+  }
   let convo = msgs;
   for (let attempt = 0; attempt < 2; attempt++) {
     const text = await callClaude(system, convo, image);
     const out = parse(text);
-    if (out && out.reply && ![out.reply, out.understood, ...values(out.custom)].some(hasLatin)) {
+    if (out && out.reply && ![out.reply, ...values(out.custom)].some(hasLatin)) {
       const ids = POOJAS.map((p) => p.id);
       if (!ids.includes(out.pooja_id)) out.pooja_id = null;
       const lib = out.library || {};
@@ -146,7 +190,7 @@ async function chat({ messages, image, state }) {
   return { reply: FALLBACK, intent: 'chat' };
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg', '.wav': 'audio/wav' };
 
 http.createServer(async (req, res) => {
   try {
@@ -163,11 +207,23 @@ http.createServer(async (req, res) => {
     }
     const file = path.join(__dirname, 'public', req.url === '/' ? 'index.html' : path.normalize(req.url.split('?')[0]).replace(/^(\.\.[/\\])+/, ''));
     if (!file.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(file)) { res.writeHead(404); return res.end('not found'); }
-    res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' });
+    const size = fs.statSync(file).size, type = MIME[path.extname(file)] || 'application/octet-stream';
+    const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (m) {                                         // ऑडियो के टुकड़े माँगने पर (ठहराव बराबर करने के लिए आगे-पीछे जाना)
+      const a = m[1] === '' ? size - parseInt(m[2], 10) : parseInt(m[1], 10);
+      const b = m[1] === '' || m[2] === '' ? size - 1 : Math.min(parseInt(m[2], 10), size - 1);
+      if (!(a >= 0 && a <= b && a < size)) { res.writeHead(416, { 'content-range': 'bytes */' + size }); return res.end(); }
+      res.writeHead(206, { 'content-type': type, 'cache-control': 'no-store', 'accept-ranges': 'bytes', 'content-range': `bytes ${a}-${b}/${size}`, 'content-length': b - a + 1 });
+      return fs.createReadStream(file, { start: a, end: b }).pipe(res);
+    }
+    res.writeHead(200, { 'content-type': type, 'cache-control': 'no-store', 'accept-ranges': 'bytes', 'content-length': size });
     fs.createReadStream(file).pipe(res);
   } catch (e) {
     console.error(e.message);
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ offline: true, reply: 'क्षमा कीजिए यजमान, कुछ बाधा आ गई।', intent: 'chat' }));
   }
-}).listen(PORT, () => console.log(`आचार्य जी तैयार हैं: http://localhost:${PORT}`));
+}).listen(PORT, () => {
+  if (!API_KEY) import('@anthropic-ai/claude-agent-sdk').then((m) => { sdk = m; spawnWarm(); }).catch(() => {});
+  console.log(`आचार्य जी तैयार हैं: http://localhost:${PORT}`);
+});

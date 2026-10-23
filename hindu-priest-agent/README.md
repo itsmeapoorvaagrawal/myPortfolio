@@ -27,6 +27,33 @@ If neither works the page falls back to a limited keyword-based offline mode.
 4. The Yajman can interrupt any time: the priest restates the ask, answers, then resumes.
 5. After a pooja finishes, another can be started without repeating the first.
 
+## Recorded voices (optional, better pronunciation)
+Mantras and shlokas can be played from audio files instead of the browser voice.
+Files are generated with the open-source Indic Parler-TTS through its Hugging Face Space
+(no key or GPU needed; free GPU quota is limited, so large runs may need retries).
+
+    node tools/export-jobs.js                      # list of texts to record -> tools/audio-jobs.json
+    node tools/generate-audio.js --samples         # a few mantras in 2 voices, then open /samples.html to listen
+    node tools/generate-audio.js --all --speaker Aryan   # record everything (resumable)
+
+The app looks up each shloka by a hash of its text in public/audio/manifest.json and plays the file;
+if a file is missing or fails it falls back to the browser voice. To use a real pandit's recording,
+replace a file in public/audio/ with the same name.
+
+## Lakshmi pooja from a document (RAG)
+The Lakshmi (Diwali) pooja follows only one supplied PDF ("दीपावली पूजन विधि और मंत्र", 4 pages).
+- `public/knowledge/lakshmi.js` holds that document: samagri, preparation, the 36 ordered steps and the mantras,
+  transcribed faithfully (only clear print errors fixed; every deviation is listed in its `notes`).
+- The pooja steps, samagri and instructions for Lakshmi come only from it. Nothing is added from outside
+  (no echo checks, optional paath, karpur aarti or closing shanti step).
+- `public/rag.js` is a small BM25 retriever (no GPU, no external service). For every message about the Lakshmi pooja the
+  server retrieves the most relevant passages and gives them to the priest with the full step order; the priest answers only from
+  them and says "this is not in the document" otherwise.
+- Test retrieval yourself: `node tools/rag-search.js "कलश में क्या रखें"`
+- Sankalp placeholders {नाम}, {गोत्र}, {स्थान}: the priest asks the Yajman for name, gotra and city or village before starting.
+- If `public/knowledge/lakshmi.js` is missing, the app falls back to the generic Lakshmi pooja.
+- The knowledge folder is git-ignored by default (it is derived from a copyrighted article); remove that line from .gitignore to commit it.
+
 ## Files
 - `server.js`: Claude call (API or Agent SDK), system prompt, Hindi-only guard
 - `public/poojas.js`: pooja catalog, shlokas, custom-pooja builder

@@ -55,6 +55,14 @@
   #drawer .dh b { flex:1; color:var(--deep); }
   #drawer button.x { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:6px 10px; cursor:pointer; font:inherit; }
   #libSearch { margin:8px 12px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font:inherit; background:var(--card); color:var(--ink); }
+  #settingsView { display:none; flex:1; overflow-y:auto; padding:4px 14px 18px; font-size:.95rem; }
+  #settingsView h3 { margin:8px 0 10px; color:var(--deep); font-size:1rem; }
+  #settingsView #voicebar { display:flex; flex-direction:column; align-items:stretch; gap:12px; margin:0; font-size:.95rem; color:var(--ink); }
+  #settingsView #voicebar label { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  #settingsView #voicebar input[type=range] { flex:1; max-width:55%; }
+  #settingsView #voicebar select { flex:1; max-width:60%; }
+  #settingsView #voicebar label.opt { justify-content:flex-start; color:var(--ink); font-size:.95rem; }
+  #settingsView #voicebar b { min-width:3.2em; text-align:right; color:var(--deep); }
   #libBody { flex:1; overflow-y:auto; padding:0 12px 14px; }
   .deity { display:flex; width:100%; align-items:center; gap:10px; text-align:left; padding:11px 12px; margin:6px 0; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:12px; cursor:pointer; font:inherit; }
   .deity span.n { color:var(--muted); font-size:.85rem; margin-left:auto; }
@@ -83,29 +91,37 @@
 
 <div id="scrim"></div>
 <aside id="drawer" aria-label="मंत्र और श्लोक संग्रह">
-  <div class="dh"><b id="libTitle">📖 मंत्र और श्लोक संग्रह</b><button class="x" id="libBack" style="display:none">← सभी देवता</button><button class="x" id="libClose" aria-label="बंद करें">✕</button></div>
+  <div class="dh"><b id="libTitle">📖 मंत्र और श्लोक संग्रह</b><button class="x" id="libBack" style="display:none">← सभी देवता</button><button class="x" id="libSettings">⚙ सेटिंग</button><button class="x" id="libClose" aria-label="बंद करें">✕</button></div>
   <input id="libSearch" type="search" placeholder="खोजें: जैसे गणेश, गायत्री, चालीसा…" autocomplete="off">
-  <label class="opt" style="padding:0 12px 4px"><input type="checkbox" id="libMeaning" checked> सुनाते समय अर्थ भी बोलें</label>
+  <label class="opt" style="padding:0 12px 4px"><input type="checkbox" id="libMeaning"> सुनाते समय अर्थ भी बोलें</label>
   <div id="libBody"></div>
+  <div id="settingsView"><h3>⚙ आवाज़ की सेटिंग</h3>
+    <div id="voicebar">
+      <label>आवाज़: <select id="voiceSel"></select></label>
+      <button id="voiceTest" type="button" title="चुनी हुई आवाज़ सुनें">🔊 सुनें</button>
+      <label>शैली: <select id="style">
+        <option value="">अपनी पसंद</option>
+        <option value="0.6,0.75">गुरुजी: गहरा और धीमा</option>
+        <option value="0.7,0.85">आचार्य: गंभीर</option>
+        <option value="0.85,0.9">सौम्य पंडित</option>
+        <option value="0.45,0.7">गहन वैदिक स्वर</option>
+      </select></label>
+      <label class="opt"><input type="checkbox" id="moreVoices"> मराठी/नेपाली आवाज़ें भी (देवनागरी पढ़ती हैं)</label>
+      <small id="voiceCount"></small>
+      <label>गंभीरता: <input id="pitch" type="range" min="0.3" max="1.2" step="0.05" value="0.7"></label>
+      <label>गति: <input id="rate" type="range" min="0.6" max="1.1" step="0.05" value="0.85"></label>
+      <label>मंत्र-गति: <input id="chantRate" type="range" min="0.5" max="1" step="0.05" value="0.7"></label>
+      <label>रिकॉर्डिंग-गति: <input id="clipRate" type="range" min="0.8" max="1.6" step="0.05" value="1.2"> <b id="clipRateVal">1.2×</b></label>
+    <label class="opt"><input type="checkbox" id="oEven" checked> रिकॉर्डिंग में ठहराव बराबर करें</label>
+    <label>रिकॉर्डिंग-ठहराव: <input id="clipPause" type="range" min="0.5" max="2" step="0.1" value="1"> <b id="clipPauseVal">1×</b></label>
+    <label>ठहराव: <input id="pauseScale" type="range" min="0.5" max="3" step="0.25" value="1.5"></label>
+      <label class="opt"><input type="checkbox" id="oRespell" checked> उच्चारण-सुधार</label>
+    </div>
+  </div>
 </aside>
 <header>
   <button id="menuBtn" aria-label="मंत्र और श्लोक संग्रह खोलें" title="मंत्र और श्लोक संग्रह">☰</button>
-  <h1>🕉️ आचार्य जी</h1><small>आपके पुरोहित, केवल पूजा और प्रार्थना के लिए</small>
-  <div id="voicebar">
-    <label>आवाज़: <select id="voiceSel"></select></label>
-    <button id="voiceTest" type="button" title="चुनी हुई आवाज़ सुनें">🔊 सुनें</button>
-    <label>शैली: <select id="style">
-      <option value="">अपनी पसंद</option>
-      <option value="0.6,0.75">गुरुजी: गहरा और धीमा</option>
-      <option value="0.7,0.85">आचार्य: गंभीर</option>
-      <option value="0.85,0.9">सौम्य पंडित</option>
-      <option value="0.45,0.7">गहन वैदिक स्वर</option>
-    </select></label>
-    <label class="opt"><input type="checkbox" id="moreVoices"> मराठी/नेपाली आवाज़ें भी (देवनागरी पढ़ती हैं)</label>
-    <small id="voiceCount"></small>
-    <label>गंभीरता: <input id="pitch" type="range" min="0.3" max="1.2" step="0.05" value="0.7"></label>
-    <label>गति: <input id="rate" type="range" min="0.6" max="1.1" step="0.05" value="0.85"></label>
-  </div>
+  <h1>🕉️ आचार्य जी</h1>
 </header>
 <div id="japaBar"><b id="japaTitle"></b><span id="japaInfo"></span><button id="japaPause">⏸ रोकें</button><button id="japaStop">⏹ समाप्त</button></div>
 <main id="chat">
@@ -128,7 +144,7 @@
       <button id="bRepeat">↻ दोहराएँ</button>
       <button id="bNext">⏭ अगला चरण</button>
       <button id="bStop">⏹ समाप्त</button>
-      <label class="opt"><input type="checkbox" id="oMeaning" checked> अर्थ भी सुनाएँ</label>
+      <label class="opt"><input type="checkbox" id="oMeaning"> अर्थ भी सुनाएँ</label>
     </div>
   </div>
 </main>
@@ -141,14 +157,17 @@
   <button id="send" class="primary">भेजें</button>
 </div>
 
+<script src="knowledge/lakshmi.js"></script>
 <script src="poojas.js"></script>
 <script src="mantras.js"></script>
+<script src="uccharan.js"></script>
+<script src="audiokey.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-const S = { intro: false, asked: -1, ask: null, yajman: { name: '', gotra: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null, done: [], echo: null };
+const S = { intro: false, asked: -1, ask: null, yajman: { name: '', gotra: '', place: '' }, pooja: null, pending: null, step: 0, phase: 'idle', hist: [], token: 0, req: 0, image: null, done: [], echo: null };
 const synth = window.speechSynthesis;
 const poojaById = (id) => POOJAS.find((p) => p.id === id);
-const fill = (t) => t.replaceAll('{नाम}', S.yajman.name || 'यजमान').replaceAll('{गोत्र}', S.yajman.gotra || 'कश्यप');
+const fill = (t) => t.replaceAll('{नाम}', S.yajman.name || 'यजमान').replaceAll('{गोत्र}', S.yajman.gotra || 'कश्यप').replaceAll('{स्थान}', S.yajman.place || '');
 const setStatus = (t) => { $('status').textContent = t || ''; };
 const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
@@ -194,6 +213,25 @@ function sampleVoice() {
 }
 $('pitch').oninput = (e) => store.set('pitch', e.target.value);
 $('rate').oninput = (e) => store.set('rate', e.target.value);
+$('chantRate').value = store.get('chantRate', '0.7');
+$('chantRate').oninput = (e) => store.set('chantRate', e.target.value);
+$('clipRate').value = store.get('clipRate', '1.2');
+$('clipRateVal').textContent = parseFloat($('clipRate').value).toFixed(2).replace(/0$/, '') + '×';
+$('clipRate').oninput = (e) => {
+  store.set('clipRate', e.target.value);
+  $('clipRateVal').textContent = parseFloat(e.target.value).toFixed(2).replace(/0$/, '') + '×';
+  try { clip.playbackRate = parseFloat(e.target.value); } catch (x) {}      // बजते-बजते भी गति बदले
+};
+$('clipPause').value = store.get('clipPause', '1');
+const showPause = () => { $('clipPauseVal').textContent = parseFloat($('clipPause').value).toFixed(1).replace(/\.0$/, '') + '×'; };
+showPause();
+$('clipPause').oninput = (e) => { store.set('clipPause', e.target.value); showPause(); };
+$('oEven').checked = store.get('even', '1') === '1';
+$('oEven').onchange = (e) => store.set('even', e.target.checked ? '1' : '0');
+$('pauseScale').value = store.get('pauseScale', '1.5');
+$('pauseScale').oninput = (e) => store.set('pauseScale', e.target.value);
+$('oRespell').checked = store.get('respell', '1') === '1';
+$('oRespell').onchange = (e) => store.set('respell', e.target.checked ? '1' : '0');
 const curVoice = () => hiVoices.find((v) => v.name === $('voiceSel').value) || hiVoices[0] || null;
 
 // ---------- संदेश दिखाना ----------
@@ -228,20 +266,157 @@ function chunks(text) {
   for (const p of parts) { if (p.length <= 180) out.push(p); else out.push(...p.match(/.{1,180}(\s|$)/g)); }
   return out;
 }
-// kind: 'talk' सामान्य बोल, 'sloka' धीमा और गहरा मंत्र-पाठ
+// श्लोक को उसके पदों में बाँटना: हर पद अलग बोला जाता है, पद के बीच छोटा और पंक्ति के अंत पर लंबा ठहराव।
+// दंड (।) पर मध्यम और दोहरे दंड (॥) पर सबसे लंबा ठहराव। अल्पविराम पर भी पद टूटता है।
+function chantChunks(text) {
+  const out = [];
+  text.split(/(?<=[।॥])/).map((x) => x.trim()).filter(Boolean).forEach((ln) => {
+    const end = /॥$/.test(ln) ? 'full' : /।$/.test(ln) ? 'half' : 'none';
+    const segs = ln.replace(/[।॥]/g, ' ').split(/\s*[,،]\s*/).map((x) => x.trim()).filter(Boolean);
+    segs.forEach((seg, si) => {
+      const w = seg.split(/\s+/), k = Math.max(1, Math.ceil(w.length / 3)), size = Math.ceil(w.length / k);
+      for (let i = 0; i < w.length; i += size) {
+        const lastInSeg = i + size >= w.length, lastInLine = lastInSeg && si === segs.length - 1;
+        const gap = lastInLine ? LINE_GAP : PADA_GAP;     // रिकॉर्डिंग वाले ठहराव के बराबर; "ठहराव" स्लाइडर इन्हें घटाता-बढ़ाता है
+        out.push({ t: w.slice(i, i + size).join(' '), gap, delta: lastInLine ? -0.08 : 0.04 });
+      }
+    });
+  });
+  return out;
+}
+const spokenForm = (t) => ($('oRespell').checked && window.UCCHARAN ? UCCHARAN.apply(t) : t);
+// ---------- रिकॉर्डिंग: जहाँ ऑडियो फ़ाइल है वहाँ वही बजती है, वरना ब्राउज़र की आवाज़ ----------
+// public/audio/manifest.json में पाठ के हैश से फ़ाइल का नाम मिलता है (tools/generate-audio.js इसे बनाता है)
+let audioManifest = {};
+fetch('audio/manifest.json').then((r) => (r.ok ? r.json() : {})).then((m) => { audioManifest = m || {}; }).catch(() => {});
+const clip = new Audio();
+function stopClip() { try { clip.pause(); clip.currentTime = 0; } catch (e) {} }
+const _cancel = synth.cancel.bind(synth);
+synth.cancel = () => { _cancel(); stopClip(); };           // बोलना रोकने के हर रास्ते पर रिकॉर्डिंग भी रुके
+const clipFor = (text) => { const f = window.AUDIOKEY && audioManifest[AUDIOKEY.key(text)]; return f ? 'audio/' + f : null; };
+// सच: पूरी बजी, असत्य: बीच में रोकी गई, 'err': फ़ाइल नहीं चली (तब ब्राउज़र की आवाज़ पर लौटें)
+function playClip(tok, url) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r) => { if (done) return; done = true; clearInterval(poll); clip.onended = clip.onerror = null; resolve(r === 'err' ? 'err' : (r && tok === S.token)); };
+    const poll = setInterval(() => { if (tok !== S.token) { stopClip(); finish(false); } }, 100);
+    clip.onended = () => finish(true); clip.onerror = () => finish('err');
+    const rate = parseFloat($('clipRate').value) || 1;
+    clip.src = url;
+    clip.preservesPitch = true; clip.webkitPreservesPitch = true;   // तेज़ करने पर स्वर ऊँचा न हो
+    clip.defaultPlaybackRate = rate; clip.playbackRate = rate;      // src बदलने पर गति वापस 1 न हो जाए
+    clip.play().catch(() => finish('err'));
+  });
+}
+// ---------- रिकॉर्डिंग के ठहराव बराबर करना ----------
+// मॉडल की रिकॉर्डिंग में ठहराव कहीं लंबे और कहीं छोटे आते हैं। चुप्पी की जगहें ढूँढकर हर ठहराव एक-सा कर देते हैं:
+// पद के बीच एक छोटा ठहराव, और पंक्ति के अंत पर (जहाँ मूल में लंबी चुप्पी थी) एक लंबा। शुरू और अंत की फ़ालतू चुप्पी कट जाती है।
+const segCache = {}; let actx = null;
+const SILENCE_MIN = 0.16, BLIP_MIN = 0.12, PADA_GAP = 450, LINE_GAP = 900;   // सेकंड; सबसे छोटी आवाज़ (उससे छोटी शोर मानी जाती है); मिलीसेकंड
+function findSegments(ab) {
+  const ch = ab.getChannelData(0), sr = ab.sampleRate, win = Math.max(1, Math.round(sr * 0.01));
+  const n = Math.floor(ch.length / win), rms = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let s = 0; const o = i * win; for (let j = 0; j < win; j++) { const x = ch[o + j]; s += x * x; } rms[i] = Math.sqrt(s / win); }
+  const sorted = Array.from(rms).sort((a, b) => a - b), ref = sorted[Math.floor(n * 0.95)] || 0, thr = Math.max(ref * 0.06, 1e-4);
+  const gapWins = Math.round(SILENCE_MIN / 0.01), runs = []; let start = -1, last = -1;
+  for (let i = 0; i < n; i++) {
+    if (rms[i] <= thr) continue;
+    if (start < 0) start = i; else if (i - last - 1 > gapWins) { runs.push([start, last]); start = i; }
+    last = i;
+  }
+  if (start >= 0) runs.push([start, last]);
+  const voiced = runs.filter(([a, b]) => b - a + 1 >= Math.round(BLIP_MIN / 0.01));     // 0.12 सेकंड से छोटी आवाज़ शोर है
+  if (voiced.length) { runs.length = 0; voiced.forEach((r) => runs.push(r)); }
+  const pad = 3;                                                // बोलने के आगे-पीछे 30 मिलीसेकंड छोड़ना
+  return runs.map(([a, b], k) => ({ s: Math.max(0, a - pad) * 0.01, e: Math.min(n, b + 1 + pad) * 0.01, silenceAfter: k < runs.length - 1 ? (runs[k + 1][0] - b - 1) * 0.01 : 0 }));
+}
+function segmentsFor(url) {
+  if (!segCache[url]) segCache[url] = (async () => {
+    try {
+      const buf = await (await fetch(url)).arrayBuffer();
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const segs = findSegments(await actx.decodeAudioData(buf));
+      return segs.length ? segs : null;
+    } catch (e) { return null; }
+  })();
+  return segCache[url];
+}
+// पाठ की किन पंक्तियों के बाद दंड है, यह देखकर तय करना कि रिकॉर्डिंग की कौन-सी चुप्पी पंक्ति का अंत है
+function lineEndGaps(segs, text) {
+  const lines = text.split(/(?<=[।॥])/).map((x) => x.trim()).filter(Boolean);
+  if (lines.length < 2 || segs.length < 2) return new Set();
+  const len = (s) => s.replace(/[।॥\s,]/g, '').length, total = lines.reduce((n, l) => n + len(l), 0);
+  const want = []; let acc = 0;
+  for (let i = 0; i < lines.length - 1; i++) { acc += len(lines[i]); want.push(acc / total); }
+  const speech = segs.reduce((n, s) => n + (s.e - s.s), 0), at = []; let cum = 0;
+  for (let j = 0; j < segs.length - 1; j++) { cum += segs[j].e - segs[j].s; at.push(cum / speech); }
+  const used = new Set();
+  want.forEach((f) => {
+    let best = -1, bd = 9;
+    at.forEach((p, j) => { if (used.has(j)) return; const d = Math.abs(p - f); if (d < bd) { bd = d; best = j; } });
+    if (best >= 0) used.add(best);
+  });
+  return used;
+}
+// सच: पूरी बजी, असत्य: बीच में रोकी गई, 'err': चली नहीं (तब पुराने तरीके पर लौटें)
+async function playSegments(tok, url, segs, text) {
+  const lineEnds = lineEndGaps(segs, text || '');
+  const rate = parseFloat($('clipRate').value) || 1, unit = parseFloat($('clipPause').value) || 1;
+  const ready = new Promise((res) => { const f = () => { clip.removeEventListener('loadedmetadata', f); res(true); }; clip.addEventListener('loadedmetadata', f); setTimeout(() => res(false), 5000); });
+  clip.src = url;
+  clip.preservesPitch = true; clip.webkitPreservesPitch = true;
+  clip.defaultPlaybackRate = rate; clip.playbackRate = rate;
+  if (!await ready) return 'err';
+  for (let i = 0; i < segs.length; i++) {
+    if (tok !== S.token) { stopClip(); return false; }
+    const sg = segs[i];
+    try { clip.currentTime = sg.s; await clip.play(); } catch (e) { return 'err'; }
+    await new Promise((res) => { const iv = setInterval(() => { if (tok !== S.token || clip.currentTime >= sg.e || clip.ended) { clearInterval(iv); res(); } }, 15); });
+    clip.pause();
+    if (tok !== S.token) return false;
+    if (i < segs.length - 1) await gapWait(tok, Math.round((lineEnds.has(i) ? LINE_GAP : PADA_GAP) * unit));
+  }
+  return tok === S.token;
+}
+function speakOne(text, rate, pitch) {
+  return new Promise((done) => {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = curVoice(); u.lang = v ? v.lang : 'hi-IN'; if (v) u.voice = v;
+    u.rate = rate; u.pitch = pitch;
+    u.onend = u.onerror = done;
+    synth.speak(u);
+  });
+}
+// टोकन बदलते ही रुक जाने वाला ठहराव
+async function gapWait(tok, ms) { for (let t = 0; t < ms && tok === S.token; t += 100) await new Promise((r) => setTimeout(r, 100)); }
+// kind: 'talk' सामान्य बोल, 'sloka' मंत्र-पाठ: धीमा, गहरा, पद-पद पर ठहराव के साथ
 function say(tok, text, kind = 'talk') {
   return new Promise(async (resolve) => {
     const base = parseFloat($('rate').value), pitch = parseFloat($('pitch').value);
+    if (kind === 'sloka') {
+      const url = clipFor(text);
+      if (url) {
+        setStatus('🎵 रिकॉर्डिंग');
+        const segs = $('oEven').checked ? await segmentsFor(url) : null;
+        let r = segs ? await playSegments(tok, url, segs, text) : 'err';
+        if (r === 'err') r = await playClip(tok, url);
+        if (r !== 'err') {
+          if (r) await gapWait(tok, Math.round(segs ? LINE_GAP * (parseFloat($('clipPause').value) || 1) : 500 * parseFloat($('pauseScale').value)));
+          return resolve(tok === S.token);
+        }
+      }
+      const rate = parseFloat($('chantRate').value), p0 = Math.max(0.3, pitch - 0.1);
+      for (const seg of chantChunks(text)) {
+        if (tok !== S.token) return resolve(false);
+        setStatus('🔊 ' + seg.t);
+        await speakOne(spokenForm(seg.t), rate, Math.min(2, Math.max(0.1, p0 + seg.delta)));
+        await gapWait(tok, Math.round(seg.gap * parseFloat($('pauseScale').value)));
+      }
+      return resolve(tok === S.token);
+    }
     for (const c of chunks(text)) {
       if (tok !== S.token) return resolve(false);
-      await new Promise((done) => {
-        const u = new SpeechSynthesisUtterance(c);
-        const v = curVoice(); u.lang = v ? v.lang : 'hi-IN'; if (v) u.voice = v;
-        u.rate = kind === 'sloka' ? Math.max(0.55, base - 0.15) : base;
-        u.pitch = kind === 'sloka' ? Math.max(0.3, pitch - 0.1) : pitch;
-        u.onend = u.onerror = done;
-        synth.speak(u);
-      });
+      await speakOne(c, base, pitch);
     }
     resolve(tok === S.token);
   });
@@ -266,7 +441,7 @@ function renderStep() {
   $('bar').firstElementChild.style.width = ((S.step) / p.steps.length * 100) + '%';
   $('stInstr').textContent = fill(st.instruction);
   $('sloka').textContent = fill(st.sloka);
-  $('meaning').textContent = 'अर्थ: ' + st.meaning;
+  $('meaning').textContent = st.meaning ? 'अर्थ: ' + st.meaning : '';
 }
 
 // ---------- सामग्री एकत्र करवाना ----------
@@ -330,7 +505,7 @@ async function echoCheck(tok, phrase) {
     if (!await say(tok, phrase, 'sloka')) return false;
     const r = await listenEcho(phrase, 20000);
     if (tok !== S.token || r === 'interrupted') return false;
-    if (r === 'ok' || r === 'skip') { await say(tok, 'बहुत सुंदर यजमान। उच्चारण शुद्ध है।'); return tok === S.token; }
+    if (r === 'ok' || r === 'skip') return tok === S.token;
     if (attempt === 2) { await say(tok, 'कोई बात नहीं यजमान, भाव ही प्रधान है। आगे बढ़ते हैं।'); return tok === S.token; }
   }
   return true;
@@ -392,14 +567,14 @@ async function run() {
     }
     if (!await say(tok, fill(st.instruction))) return;
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
-    if ($('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
+    if (st.meaning && $('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
     if (st.echo && !await echoCheck(tok, st.echo)) return;
     if (!await wait(tok, st.wait || 3500)) return;
     S.step++;
   }
   S.phase = 'idle'; stageMode('off');
   S.done.push(p.name); S.pooja = null; S.pending = null;
-  const done = `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि और कोई पूजा करवानी हो, तो नाम बताइए।`;
+  const done = p.fromKB ? `यजमान, ${p.name} की विधि पूरी हुई। यदि और कोई पूजा करवानी हो, तो नाम बताइए।` : `यजमान, ${p.name} संपन्न हुई। भगवान की कृपा आप और आपके परिवार पर सदा बनी रहे। ॐ शांतिः शांतिः शांतिः। यदि और कोई पूजा करवानी हो, तो नाम बताइए।`;
   add('acharya', done); S.hist.push({ role: 'assistant', text: done }); showMenu();
   await say(tok, done);
   setStatus('अगली पूजा के लिए नाम बताइए');
@@ -409,6 +584,18 @@ function stopPooja() {
 }
 
 // ---------- यजमान से संवाद ----------
+// केवल तब जब पूजा चल रही या रुकी हो, और यजमान का पूरा संदेश ठीक एक छोटा आदेश हो
+function quickCommand(text) {
+  if (!S.pooja) return null;
+  const q = (text || '').replace(/[।.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (S.phase === 'samagri') return /^(मैं )?(सब )?(तैयार|तैयार हूँ|तैयार है|हो गया|हो गई|सब तैयार है)$/.test(q) ? 'ready' : null;
+  if (/^(रुको|रुकिए|रुकें|रोको|रोकिए|ठहरो|ठहरिए)$/.test(q)) return 'pause';
+  if (/^(आगे बढ़ो|आगे बढ़ें|आगे बढ़िए|आगे|जारी रखो|जारी रखें|चालू करो|चालू कीजिए)$/.test(q)) return 'resume';
+  if (/^(दोहराओ|दोहराइए|फिर से|दोबारा)$/.test(q)) return 'repeat';
+  if (/^(अगला|अगला चरण|छोड़ो|छोड़िए)$/.test(q)) return 'next';
+  if (/^(समाप्त|समाप्त करो|समाप्त कीजिए|बंद करो|पूजा समाप्त करो)$/.test(q)) return 'stop';
+  return null;
+}
 async function handleUser(text, image) {
   text = (text || '').trim();
   if (!text && !image) return;
@@ -419,9 +606,11 @@ async function handleUser(text, image) {
   const myReq = ++S.req;
   add('yajman', text || 'यह चित्र देखिए', image && image.url);
   S.hist.push({ role: 'user', text: text || '(चित्र भेजा गया)' });
-  setStatus('आचार्य जी सुन रहे हैं…');
+  const quick = image ? null : quickCommand(text);
+  setStatus(quick ? '' : 'आचार्य जी सुन रहे हैं…');
   let out;
-  if (S.offline) out = localReply(text);
+  if (quick) out = { reply: '', intent: quick, pooja_id: null, yajman: {} };
+  else if (S.offline) out = localReply(text);
   else try {
     const r = await fetch('/api/chat', {
       method: 'POST', headers: { 'content-type': 'application/json' },
@@ -435,12 +624,11 @@ async function handleUser(text, image) {
   } catch { S.offline = true; out = localReply(text); }
   if (myReq !== S.req) return;       // इस बीच यजमान ने फिर कुछ कहा; पुराना उत्तर छोड़ दें
   setStatus('');
-  if (out.yajman) { if (out.yajman.name) S.yajman.name = out.yajman.name; if (out.yajman.gotra) S.yajman.gotra = out.yajman.gotra; }
+  if (out.yajman) { if (out.yajman.name) S.yajman.name = out.yajman.name; if (out.yajman.gotra) S.yajman.gotra = out.yajman.gotra; if (out.yajman.place) S.yajman.place = out.yajman.place; }
   if (out.pooja_id && !S.pooja) S.pending = out.pooja_id;
-  S.hist.push({ role: 'assistant', text: out.reply });
-  add('acharya', out.reply);
+  if (out.reply) { S.hist.push({ role: 'assistant', text: out.reply }); add('acharya', out.reply); }
   const tok = ++S.token;
-  await say(tok, out.reply);
+  if (out.reply) await say(tok, out.reply);
   if (tok !== S.token) return;       // बोलते समय फिर टोका गया
   const intent = out.intent;
   if (intent === 'start') {
@@ -454,6 +642,7 @@ async function handleUser(text, image) {
   else if (S.pooja && (intent === 'resume' || (wasRunning && intent === 'chat'))) run();
   else if (S.pooja && intent === 'repeat') run();
   else if (S.pooja && intent === 'next') { S.step = Math.min(S.step + 1, S.pooja.steps.length - 1); run(); }
+  else if (S.pooja && intent === 'pause') { S.phase = 'paused'; setStatus('पूजा रुकी है। "आगे बढ़ें" दबाएँ या बोलें।'); }
   else if (S.pooja) setStatus('पूजा रुकी हुई है। "आगे बढ़ें" दबाएँ या बोलें।');
 }
 
@@ -479,7 +668,7 @@ function localReply(text) {
     return out(`ठीक है यजमान, ${p.name} की तैयारी करते हैं। मैं नाम की जगह यजमान और गोत्र कश्यप मानकर संकल्प लूँगा।`, 'start', id);
   }
   if (S.pooja && S.phase === 'samagri') {
-    if (/तैयार|हो गया|हो गई|सब है|ठीक|हाँ|हां/.test(t)) return out('बहुत अच्छा यजमान, अब पूजा आरंभ करते हैं।', 'ready');
+    if (/तैयार|हो गया|हो गई|सब है|ठीक|हाँ|हां/.test(t)) return out('ठीक है यजमान, अब पूजा आरंभ करते हैं।', 'ready');
     if (/समाप्त|बंद|रद्द/.test(t)) return out('ठीक है यजमान, पूजा नहीं करते। ॐ शांतिः।', 'stop');
     return out('यजमान, सामग्री तैयार हो जाए तो कहिए, मैं तैयार हूँ।');
   }
@@ -497,7 +686,15 @@ fetch('/api/mode').then((r) => r.json()).then((m) => { S.offline = !!m.offline; 
 // ---------- मंत्र और श्लोक संग्रह ----------
 let libDeity = null;
 const libOpen = () => document.body.classList.contains('libopen');
+function showSettings(on) {
+  $('settingsView').style.display = on ? 'block' : 'none';
+  $('libSearch').style.display = $('libBody').style.display = on ? 'none' : '';
+  $('libMeaning').parentElement.style.display = on ? 'none' : '';
+  $('libSettings').textContent = on ? '← मंत्र' : '⚙ सेटिंग';
+  if (on) { $('libTitle').textContent = '⚙ सेटिंग'; $('libBack').style.display = 'none'; } else renderLibrary();
+}
 function openLibrary(deityId, mantraId) {
+  if ($('settingsView').style.display !== 'none') showSettings(false);
   if (S.phase === 'running') { interrupt(); S.phase = 'paused'; setStatus('पूजा रुकी है। संग्रह बंद करके "आगे बढ़ें" दबाइए।'); }
   libDeity = deityId || null;
   $('libSearch').value = '';
@@ -604,6 +801,7 @@ function renderLibrary() {
   });
 }
 $('menuBtn').onclick = () => openLibrary();
+$('libSettings').onclick = () => showSettings($('settingsView').style.display === 'none');
 $('libClose').onclick = $('scrim').onclick = closeLibrary;
 $('libBack').onclick = () => { libDeity = null; $('libSearch').value = ''; renderLibrary(); };
 $('libSearch').oninput = renderLibrary;
