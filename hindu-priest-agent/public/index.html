@@ -415,8 +415,27 @@ function say(tok, text, kind = 'talk') {
           return resolve(tok === S.token);
         }
       }
+      // रिकॉर्डिंग न हो तो पहले हॉस्टेड आवाज़ (Google/ElevenLabs): पंक्ति-पंक्ति; जहाँ से वह न चले, बाकी हिस्सा ब्राउज़र की आवाज़ में
+      let rest = text;
+      if (ttsOn) {
+        const lines = chunks(text);
+        const nextH = (i) => (lines[i] ? ttsUrl(lines[i]).catch((e) => { console.warn('हॉस्टेड आवाज़ विफल:', e.message); setStatus('⚠ हॉस्टेड आवाज़ नहीं चली: ' + e.message.slice(0, 90)); return null; }) : Promise.resolve(null));
+        let pend = nextH(0), i = 0;
+        for (; i < lines.length; i++) {
+          if (tok !== S.token) return resolve(false);
+          const u = await pend; pend = nextH(i + 1);
+          if (!u) break;
+          setStatus('🔊 ' + lines[i]);
+          const r = await playClip(tok, u, 1);
+          if (r === 'err') break;
+          if (!r) return resolve(false);
+          if (i < lines.length - 1) await gapWait(tok, Math.round(LINE_GAP * (parseFloat($('clipPause').value) || 1)));
+        }
+        if (i >= lines.length) return resolve(tok === S.token);
+        rest = lines.slice(i).join(' ');
+      }
       const rate = parseFloat($('chantRate').value), p0 = Math.max(0.3, pitch - 0.1);
-      for (const seg of chantChunks(text)) {
+      for (const seg of chantChunks(rest)) {
         if (tok !== S.token) return resolve(false);
         setStatus('🔊 ' + seg.t);
         await speakOne(spokenForm(seg.t), rate, Math.min(2, Math.max(0.1, p0 + seg.delta)));
