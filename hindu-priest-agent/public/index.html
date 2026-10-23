@@ -293,15 +293,25 @@ const clip = new Audio();
 function stopClip() { try { clip.pause(); clip.currentTime = 0; } catch (e) {} }
 const _cancel = synth.cancel.bind(synth);
 synth.cancel = () => { _cancel(); stopClip(); };           // बोलना रोकने के हर रास्ते पर रिकॉर्डिंग भी रुके
+// ---------- ElevenLabs की आवाज़ (सर्वर पर कुंजी हो तब): सामान्य बोल इसी से, न चले तो ब्राउज़र की आवाज़ ----------
+let ttsOn = false;
+fetch('api/tts-mode').then((r) => r.json()).then((m) => { ttsOn = !!(m && m.enabled); }).catch(() => {});
+const ttsCache = new Map();
+function ttsUrl(text) {
+  if (!ttsCache.has(text)) ttsCache.set(text, fetch('api/tts', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text }) })
+    .then((r) => { if (!r.ok) throw new Error('tts ' + r.status); return r.blob(); }).then((b) => URL.createObjectURL(b))
+    .catch((e) => { ttsCache.delete(text); throw e; }));
+  return ttsCache.get(text);
+}
 const clipFor = (text) => { const f = window.AUDIOKEY && audioManifest[AUDIOKEY.key(text)]; return f ? 'audio/' + f : null; };
 // सच: पूरी बजी, असत्य: बीच में रोकी गई, 'err': फ़ाइल नहीं चली (तब ब्राउज़र की आवाज़ पर लौटें)
-function playClip(tok, url) {
+function playClip(tok, url, fixedRate) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (r) => { if (done) return; done = true; clearInterval(poll); clip.onended = clip.onerror = null; resolve(r === 'err' ? 'err' : (r && tok === S.token)); };
     const poll = setInterval(() => { if (tok !== S.token) { stopClip(); finish(false); } }, 100);
     clip.onended = () => finish(true); clip.onerror = () => finish('err');
-    const rate = parseFloat($('clipRate').value) || 1;
+    const rate = fixedRate || parseFloat($('clipRate').value) || 1;
     clip.src = url;
     clip.preservesPitch = true; clip.webkitPreservesPitch = true;   // तेज़ करने पर स्वर ऊँचा न हो
     clip.defaultPlaybackRate = rate; clip.playbackRate = rate;      // src बदलने पर गति वापस 1 न हो जाए
@@ -414,9 +424,19 @@ function say(tok, text, kind = 'talk') {
       }
       return resolve(tok === S.token);
     }
-    for (const c of chunks(text)) {
+    const parts = chunks(text);
+    const nextUrl = (i) => (ttsOn && parts[i] ? ttsUrl(parts[i]).catch(() => null) : Promise.resolve(null));
+    let pending = nextUrl(0);
+    for (let i = 0; i < parts.length; i++) {
       if (tok !== S.token) return resolve(false);
-      await speakOne(c, base, pitch);
+      const url = await pending;
+      pending = nextUrl(i + 1);                      // अगला टुकड़ा पहले से बनवाना, ताकि बीच में रुकना न पड़े
+      if (tok !== S.token) return resolve(false);
+      if (url) {
+        const r = await playClip(tok, url, 1);
+        if (r !== 'err') { if (!r) return resolve(false); continue; }
+      }
+      await speakOne(parts[i], base, pitch);
     }
     resolve(tok === S.token);
   });

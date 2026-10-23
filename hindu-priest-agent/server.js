@@ -6,6 +6,31 @@ const path = require('path');
 const POOJAS = require('./public/poojas.js');
 const MANTRAS = require('./public/mantras.js');
 const RAG = require('./public/rag.js');
+const AUDIOKEY = require('./public/audiokey.js');
+
+// ElevenLabs की आवाज़ (वैकल्पिक): ELEVENLABS_API_KEY और ELEVENLABS_VOICE_ID सेट हों तो आचार्य जी की बोली इसी से बनती है।
+// कुंजी केवल पर्यावरण-चर में रखें, कोड या चैट में नहीं। सेट न हो तो ब्राउज़र की आवाज़ चलती है।
+const TTS = { key: process.env.ELEVENLABS_API_KEY || '', voice: process.env.ELEVENLABS_VOICE_ID || '', model: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2' };
+const ttsEnabled = () => !!(TTS.key && TTS.voice);
+const TTS_DIR = path.join(__dirname, '.tts-cache');
+const ttsInflight = new Map();
+async function ttsAudio(text) {
+  const file = path.join(TTS_DIR, AUDIOKEY.key(TTS.voice + '|' + TTS.model + '|' + text) + '.mp3');
+  if (fs.existsSync(file)) return fs.readFileSync(file);
+  if (!ttsInflight.has(file)) {
+    ttsInflight.set(file, (async () => {
+      const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(TTS.voice) + '?output_format=mp3_44100_64', {
+        method: 'POST', headers: { 'xi-api-key': TTS.key, 'content-type': 'application/json', accept: 'audio/mpeg' },
+        body: JSON.stringify({ text, model_id: TTS.model, language_code: 'hi' }),
+      });
+      if (!r.ok) throw new Error('ElevenLabs ' + r.status + ' ' + (await r.text()).slice(0, 200));
+      const buf = Buffer.from(await r.arrayBuffer());
+      fs.mkdirSync(TTS_DIR, { recursive: true }); fs.writeFileSync(file, buf);
+      return buf;
+    })().finally(() => ttsInflight.delete(file)));
+  }
+  return ttsInflight.get(file);
+}
 // लक्ष्मी पूजन का ज्ञान-आधार (PDF)। न मिले तो यह सुविधा बंद रहती है।
 let LKB = null; try { LKB = require('./public/knowledge/lakshmi.js'); } catch (e) { LKB = null; }
 const kbChunks = (kb) => [
@@ -197,6 +222,22 @@ http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/api/mode') {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({ offline: false }));
+    }
+    if (req.method === 'GET' && req.url === '/api/tts-mode') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ enabled: ttsEnabled() }));
+    }
+    if (req.method === 'POST' && req.url === '/api/tts') {
+      if (!ttsEnabled()) { res.writeHead(503); return res.end('tts not configured'); }
+      let body = '';
+      for await (const c of req) { body += c; if (body.length > 5000) throw new Error('too large'); }
+      const text = String(JSON.parse(body).text || '').trim();
+      if (!text || text.length > 800) { res.writeHead(400); return res.end('bad text'); }
+      try {
+        const buf = await ttsAudio(text);
+        res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'private, max-age=86400' });
+        return res.end(buf);
+      } catch (e) { console.error(String(e.message).slice(0, 300)); res.writeHead(502); return res.end('tts failed'); }
     }
     if (req.method === 'POST' && req.url === '/api/chat') {
       let body = '';

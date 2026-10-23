@@ -7,3 +7,4 @@ tools/*.bak
 # लक्ष्मी पूजन का ज्ञान-आधार एक कॉपीराइट लेख से बना है; commit करना हो तो यह पंक्ति हटा दीजिए
 public/knowledge/
 tools/local-tts/venv/
+.tts-cache/
