@@ -495,24 +495,54 @@ function say(tok, text, kind = 'talk') {
   });
 }
 const wait = (tok, ms) => new Promise((r) => setTimeout(() => r(tok === S.token), ms));
-// संकल्प: आचार्य जी एक-एक शब्द बोलते हैं और हर शब्द के बाद उतना ही ठहरते हैं जितने में यजमान साथ-साथ दोहरा ले।
-// यजमान के पूरा करने की प्रतीक्षा नहीं होती; आचार्य जी आगे बढ़ते जाते हैं। हॉस्टेड आवाज़ हो तो अगले शब्द पहले से मँगवा लिए जाते हैं।
+// संकल्प: आचार्य जी 2-3 शब्दों के टुकड़ों में बोलते हैं और हर टुकड़े के बाद उतना ठहरते हैं जितने में यजमान साथ-साथ दोहरा ले।
+// यजमान के पूरा करने की प्रतीक्षा नहीं होती; आचार्य जी आगे बढ़ते जाते हैं। हॉस्टेड आवाज़ हो तो अगले टुकड़े पहले से मँगवा लिए जाते हैं।
+// टुकड़े विराम-चिह्नों (, । ॥ : ; –) पर टूटते हैं, फिर हर वाक्यांश बराबर-बराबर 2-3 शब्दों में बँटता है; अकेला शब्द नहीं छूटता,
+// और छोटे शब्द (ॐ, श्री, मम, च...) अगले शब्द के साथ जुड़े रहते हैं; बहुत लंबे शब्द अकेले या जोड़ी में रहते हैं।
+const LETTERS = (t) => t.replace(/[^\u0900-\u097F]/g, '').length;
+function chunkForRepeat(text, maxWords = 3, maxLetters = 30) {
+  const toks = text.split(/\s+/).filter((w) => /[\u0900-\u097F0-9]/.test(w));
+  const clauses = []; let cur = [];
+  for (const w of toks) { cur.push(w); if (/[,।॥:;–]$/.test(w)) { clauses.push(cur); cur = []; } }
+  if (cur.length) clauses.push(cur);
+  const out = [];
+  for (const cl of clauses) {
+    const units = [];                                                       // छोटे शब्द अगले शब्द से जुड़ते हैं
+    for (let i = 0; i < cl.length; i++) {
+      let u = cl[i];
+      while (i < cl.length - 1 && LETTERS(cl[i]) <= 4 && !/[,।॥:;–]$/.test(cl[i])) { u += ' ' + cl[i + 1]; i++; if (LETTERS(u) > 9) break; }
+      units.push(u);
+    }
+    const k = Math.ceil(units.length / maxWords), base = Math.floor(units.length / k), extra = units.length % k;
+    let at = 0;
+    for (let g = 0; g < k; g++) {
+      let n = base + (g < extra ? 1 : 0), grp = units.slice(at, at + n); at += n;
+      const nw = (a) => a.join(' ').split(' ').length;
+      while (grp.length > 1 && (LETTERS(grp.join(' ')) > maxLetters || nw(grp) > maxWords)) {   // बहुत लंबा या 3 से ज़्यादा शब्द हों तो शब्द अलग
+        let take = 1;                                              // जितने इकाइयाँ 3 शब्द और अक्षर-सीमा में आएँ, उतनी पहले टुकड़े में
+        while (take < grp.length && nw(grp.slice(0, take + 1)) <= maxWords && LETTERS(grp.slice(0, take + 1).join(' ')) <= maxLetters) take++;
+        out.push(grp.splice(0, take).join(' '));
+      }
+      out.push(grp.join(' '));
+    }
+  }
+  return out;
+}
 async function sayWords(tok, text) {
-  const words = text.split(/\s+/).filter((w) => /[\u0900-\u097F0-9]/.test(w));
+  const chunks = chunkForRepeat(text);
   const urls = [];
-  const fetchAt = (i) => { if (ttsOn && words[i] && !urls[i]) urls[i] = ttsUrl(words[i]).catch(() => null); return urls[i] || Promise.resolve(null); };
-  for (let i = 0; i < words.length; i++) {
+  const fetchAt = (i) => { if (ttsOn && chunks[i] && !urls[i]) urls[i] = ttsUrl(chunks[i]).catch(() => null); return urls[i] || Promise.resolve(null); };
+  for (let i = 0; i < chunks.length; i++) {
     if (tok !== S.token) return false;
-    for (let k = i; k < Math.min(words.length, i + 6); k++) fetchAt(k);         // आगे के कुछ शब्द पहले से
-    const w = words[i];
-    setStatus('🗣 दोहराइए: ' + w);
+    for (let k = i; k < Math.min(chunks.length, i + 4); k++) fetchAt(k);       // आगे के कुछ टुकड़े पहले से
+    const c = chunks[i];
+    setStatus('🗣 दोहराइए: ' + c);
     const url = await fetchAt(i);
     if (tok !== S.token) return false;
     let r = url ? await playClip(tok, url, 1) : 'err';
-    if (r === 'err') await speakOne(spokenForm(w), parseFloat($('chantRate').value), Math.max(0.3, parseFloat($('pitch').value) - 0.1));
+    if (r === 'err') await speakOne(spokenForm(c), parseFloat($('chantRate').value), Math.max(0.3, parseFloat($('pitch').value) - 0.1));
     else if (!r) return false;
-    const letters = w.replace(/[^\u0900-\u097F]/g, '').length;
-    if (!await wait(tok, Math.round((450 + 80 * letters) * (parseFloat($('pauseScale').value) / 1.5)))) return false;
+    if (!await wait(tok, Math.round((500 + 65 * LETTERS(c)) * (parseFloat($('pauseScale').value) / 1.5)))) return false;
   }
   setStatus('');
   return tok === S.token;
@@ -688,8 +718,8 @@ async function run() {
     }
     if (!await say(tok, fill(st.instruction))) return;
     if (st.instruction && !await wait(tok, 2000)) return;           // निर्देश के बाद 2 सेकंड का ठहराव, फिर श्लोक
-    if (st.title === 'संकल्प') {                                     // संकल्प: एक-एक शब्द, यजमान साथ-साथ दोहराए
-      if (!await say(tok, 'अब मैं एक-एक शब्द बोलता हूँ। आप मेरे साथ-साथ दोहराते जाइए।')) return;
+    if (st.title === 'संकल्प') {                                     // संकल्प: 2-3 शब्दों के टुकड़े, यजमान साथ-साथ दोहराए
+      if (!await say(tok, 'अब मैं दो-तीन शब्द बोलता हूँ। आप मेरे साथ-साथ दोहराते जाइए।')) return;
       if (!await wait(tok, 1500)) return;
       if (!await sayWords(tok, fill(st.sloka))) return;
     } else if (!await say(tok, fill(st.sloka), 'sloka')) return;
