@@ -295,6 +295,8 @@ const _cancel = synth.cancel.bind(synth);
 synth.cancel = () => { _cancel(); stopClip(); };           // बोलना रोकने के हर रास्ते पर रिकॉर्डिंग भी रुके
 // ---------- ElevenLabs की आवाज़ (सर्वर पर कुंजी हो तब): सामान्य बोल इसी से, न चले तो ब्राउज़र की आवाज़ ----------
 let ttsOn = false;
+// true: श्लोक पहले हॉस्टेड आवाज़ (Google) में, वह न चले तो Aryan की रिकॉर्डिंग, फिर ब्राउज़र की आवाज़। false: पहले रिकॉर्डिंग।
+const HOSTED_FIRST = true;
 fetch('api/tts-mode').then((r) => r.json()).then((m) => { ttsOn = !!(m && m.enabled); }).catch(() => {});
 const ttsCache = new Map();
 function ttsUrl(text) {
@@ -400,12 +402,37 @@ function speakOne(text, rate, pitch) {
 // टोकन बदलते ही रुक जाने वाला ठहराव
 async function gapWait(tok, ms) { for (let t = 0; t < ms && tok === S.token; t += 100) await new Promise((r) => setTimeout(r, 100)); }
 // kind: 'talk' सामान्य बोल, 'sloka' मंत्र-पाठ: धीमा, गहरा, पद-पद पर ठहराव के साथ
+// पूरे श्लोक की हॉस्टेड आवाज़ पहले ही मँगवा लेना (पंक्ति-पंक्ति, एक साथ); एक भी पंक्ति न बने तो कुछ बजाए बिना 'none',
+// ताकि Aryan की रिकॉर्डिंग शुरू से बज सके। नतीजा: 'done' | 'stopped' | 'none' | {rest: बाकी पाठ}
+async function playHostedLines(tok, text) {
+  const lines = chunks(text);
+  setStatus('🔊 ' + lines[0]);
+  const urls = await Promise.all(lines.map((l) => ttsUrl(l).catch((e) => { console.warn('हॉस्टेड आवाज़ विफल:', e.message); setStatus('⚠ हॉस्टेड आवाज़ नहीं चली: ' + e.message.slice(0, 90)); return null; })));
+  if (tok !== S.token) return 'stopped';
+  if (!urls.every(Boolean)) return 'none';
+  for (let i = 0; i < urls.length; i++) {
+    setStatus('🔊 ' + lines[i]);
+    const r = await playClip(tok, urls[i], 1);
+    if (r === 'err') return i === 0 ? 'none' : { rest: lines.slice(i).join(' ') };
+    if (!r) return 'stopped';
+    if (i < urls.length - 1) await gapWait(tok, Math.round(LINE_GAP * (parseFloat($('clipPause').value) || 1)));
+  }
+  return 'done';
+}
 function say(tok, text, kind = 'talk') {
   return new Promise(async (resolve) => {
     const base = parseFloat($('rate').value), pitch = parseFloat($('pitch').value);
     if (kind === 'sloka') {
       const url = clipFor(text);
-      if (url) {
+      let hostedTried = false, rest0 = null;
+      if (HOSTED_FIRST && ttsOn) {
+        hostedTried = true;
+        const h = await playHostedLines(tok, text);
+        if (h === 'done') return resolve(tok === S.token);
+        if (h === 'stopped') return resolve(false);
+        if (h !== 'none') rest0 = h.rest;                 // बीच से टूटा: बाकी हिस्सा ब्राउज़र की आवाज़ में
+      }
+      if (url && rest0 === null) {
         setStatus('🎵 रिकॉर्डिंग');
         const segs = $('oEven').checked ? await segmentsFor(url) : null;
         let r = segs ? await playSegments(tok, url, segs, text) : 'err';
@@ -416,8 +443,8 @@ function say(tok, text, kind = 'talk') {
         }
       }
       // रिकॉर्डिंग न हो तो पहले हॉस्टेड आवाज़ (Google/ElevenLabs): पंक्ति-पंक्ति; जहाँ से वह न चले, बाकी हिस्सा ब्राउज़र की आवाज़ में
-      let rest = text;
-      if (ttsOn) {
+      let rest = rest0 !== null ? rest0 : text;
+      if (ttsOn && !hostedTried) {
         const lines = chunks(text);
         const nextH = (i) => (lines[i] ? ttsUrl(lines[i]).catch((e) => { console.warn('हॉस्टेड आवाज़ विफल:', e.message); setStatus('⚠ हॉस्टेड आवाज़ नहीं चली: ' + e.message.slice(0, 90)); return null; }) : Promise.resolve(null));
         let pend = nextH(0), i = 0;
