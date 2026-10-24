@@ -116,6 +116,8 @@
     <label>रिकॉर्डिंग-ठहराव: <input id="clipPause" type="range" min="0.5" max="2" step="0.1" value="1"> <b id="clipPauseVal">1×</b></label>
     <label>ठहराव: <input id="pauseScale" type="range" min="0.5" max="3" step="0.25" value="1.5"></label>
     <label>क्रिया का समय: <input id="actScale" type="range" min="0" max="2" step="0.25" value="1"> <b id="actScaleVal">1×</b></label>
+    <label class="opt"><input type="checkbox" id="oNoise" checked> शोर से बचाव (बीच में टोकना कठिन, गूँज अनदेखी)</label>
+    <label class="opt"><input type="checkbox" id="oPtt"> पुश-टू-टॉक (Space या माइक बटन दबाकर बोलें)</label>
       <label class="opt"><input type="checkbox" id="oRespell" checked> उच्चारण-सुधार</label>
     </div>
   </div>
@@ -235,6 +237,8 @@ $('actScale').value = store.get('actScale', '1');
 const showAct = () => { const v = parseFloat($('actScale').value); $('actScaleVal').textContent = v === 0 ? 'बंद' : v.toFixed(2).replace(/\.?0+$/, '') + '×'; };
 showAct();
 $('actScale').oninput = (e) => { store.set('actScale', e.target.value); showAct(); };
+$('oNoise').checked = store.get('noise', '1') === '1';
+$('oNoise').onchange = (e) => store.set('noise', e.target.checked ? '1' : '0');
 $('oRespell').checked = store.get('respell', '1') === '1';
 $('oRespell').onchange = (e) => store.set('respell', e.target.checked ? '1' : '0');
 const curVoice = () => hiVoices.find((v) => v.name === $('voiceSel').value) || hiVoices[0] || null;
@@ -424,6 +428,57 @@ async function playHostedLines(tok, text) {
   }
   return 'done';
 }
+// ---------- शोर और गूँज से बचाव ----------
+// 1) आचार्य जी को टोकने के लिए कम से कम 2 शब्द, लगातार लगभग आधा सेकंड (या पूरा वाक्य, ठीक भरोसे के साथ) चाहिए; एक खाँसी,
+//    ताली या एक शब्द की आवाज़ से वे नहीं रुकते। "रुकिए/रुको/आचार्य जी" जैसे शब्द तुरंत रोकते हैं।
+// 2) माइक में आचार्य जी की अपनी आवाज़ लौटकर आए तो उसे पहचानकर अनदेखा करना: उनके हाल में बोले पाठ से मिलान।
+// 3) श्लोक बोलते समय, और संकल्प/मंत्र में यजमान के साथ-साथ दोहराते समय, माइक की आवाज़ अनदेखी (S.deaf)। पुश-टू-टॉक वैकल्पिक।
+// 4) शोर से रुक जाने पर कुछ स्पष्ट न सुना जाए तो थोड़ी देर में पूजा अपने-आप आगे बढ़ती है।
+S.spoken = []; S.deaf = false; S.ptt = false; S.pttDown = false; S.autoTimer = null;
+const STOP_WORDS = /रुको|रुकिए|रुकें|रुकिये|ठहरो|ठहरिए|रोको|आचार्य जी|एक मिनट/;
+let AUTO_RESUME_MS = 4000, speechSince = 0, lastSpeechAt = 0;
+function noteSpoken(text) {
+  const now = Date.now();
+  S.spoken = S.spoken.filter((x) => now - x.t < 25000).slice(-7);
+  S.spoken.push({ t: now, n: norm(text) });
+}
+function isEcho(said) {
+  const now = Date.now(), sw = norm(said).split(' ').filter((w) => w.length >= 2);
+  if (!sw.length) return false;
+  return S.spoken.some((e) => {
+    if (now - e.t > 25000) return false;
+    const ew = e.n.split(' ');
+    return sw.filter((w) => ew.some((x) => x === w || (w.length > 3 && lev(x, w) <= 1))).length / sw.length >= 0.6;
+  });
+}
+// 'ignore' | 'interrupt': आचार्य जी के बोलते समय आई आवाज़ पर क्या करें
+function bargeGate(said, r) {
+  if (S.ptt && S.pttDown) return 'interrupt';                       // यजमान ने बटन दबाकर जानबूझकर बोला
+  if (!$('oNoise').checked) return 'interrupt';                     // बचाव बंद: पहले जैसा व्यवहार
+  if (STOP_WORDS.test(said)) return S.spoken.some((e) => STOP_WORDS.test(e.n)) && isEcho(said) ? 'ignore' : 'interrupt';
+  if (isEcho(said)) return 'ignore';                                // आचार्य जी की अपनी आवाज़ की गूँज
+  if (S.deaf) return 'ignore';                                      // श्लोक या साथ-साथ दोहराने का समय
+  const words = norm(said).split(' ').filter(Boolean).length, conf = r[0].confidence;
+  if (r.isFinal) {
+    if (conf > 0 && conf < 0.5) return 'ignore';                    // पहचान पर भरोसा कम
+    return words >= 2 || quickCommand(said) ? 'interrupt' : 'ignore';
+  }
+  if (words < 2) return 'ignore';
+  const now = Date.now();
+  if (!speechSince || now - lastSpeechAt > 1200) speechSince = now;   // नई आवाज़ की शुरुआत
+  lastSpeechAt = now;
+  return now - speechSince >= 500 ? 'interrupt' : 'ignore';
+}
+function scheduleAutoResume() {
+  clearTimeout(S.autoTimer);
+  S.autoTimer = setTimeout(() => {
+    S.autoTimer = null;
+    if (S.pooja && S.phase === 'interrupted') { setStatus('कोई स्पष्ट आदेश नहीं सुना, पूजा जारी है'); run(); }
+  }, AUTO_RESUME_MS);
+}
+function pttPress() { if (!S.ptt || S.pttDown || !rec) return; S.pttDown = true; try { rec.start(); } catch (e) {} setStatus('🎙 बोलिए… (छोड़ने पर भेजा जाएगा)'); }
+function pttRelease() { if (!S.ptt || !S.pttDown) return; try { rec.stop(); } catch (e) {} setTimeout(() => { S.pttDown = false; setStatus(''); }, 1500); }
+
 // यजमान का नाम पता हो तो बोलते समय "यजमान" की जगह अधिकतर "नाम जी" (हर तीन में से दो बार); एक बार बोले गए वाक्य में एक ही बार।
 // केवल आचार्य जी की सामान्य बोली में; मंत्र और श्लोक कभी नहीं बदलते। स्क्रीन पर लिखा पाठ वैसा ही रहता है।
 let addrCount = 0;
@@ -435,8 +490,15 @@ function addressYajman(text) {
   if (!re.test(text) || addrCount++ % 3 === 2) return text;
   return text.replace(re, (m, pre) => pre + call);
 }
-function say(tok, text, kind = 'talk', slow = false) {
+// आचार्य जी जब श्लोक बोल रहे हों, माइक की आवाज़ें (घंटी, गूँज) अनदेखी रहती हैं; "रुकिए" जैसे शब्द फिर भी सुने जाते हैं।
+async function say(tok, text, kind = 'talk', slow = false) {
   if (kind === 'talk') text = addressYajman(text);
+  noteSpoken(text);
+  const prevDeaf = S.deaf;
+  if (kind === 'sloka') S.deaf = true;
+  try { return await sayInner(tok, text, kind, slow); } finally { S.deaf = prevDeaf; }
+}
+function sayInner(tok, text, kind, slow) {
   return new Promise(async (resolve) => {
     const base = parseFloat($('rate').value) * (slow ? 0.85 : 1), pitch = parseFloat($('pitch').value);   // slow: कई क्रियाओं वाले निर्देश धीरे
     if (kind === 'sloka') {
@@ -539,7 +601,11 @@ function chunkForRepeat(text, maxWords = 3, maxLetters = 30) {
   }
   return out;
 }
-async function sayWords(tok, text) {
+async function sayWords(tok, text) {                       // यजमान साथ-साथ दोहराता है: उसकी आवाज़ से आचार्य जी न रुकें
+  const prevDeaf = S.deaf; S.deaf = true;
+  try { return await sayWordsInner(tok, text); } finally { S.deaf = prevDeaf; }
+}
+async function sayWordsInner(tok, text) {
   const chunks = chunkForRepeat(text);
   const urls = [];
   const fetchAt = (i) => { if (ttsOn && chunks[i] && !urls[i]) urls[i] = ttsUrl(chunks[i]).catch(() => null); return urls[i] || Promise.resolve(null); };
@@ -547,7 +613,7 @@ async function sayWords(tok, text) {
     if (tok !== S.token) return false;
     for (let k = i; k < Math.min(chunks.length, i + 4); k++) fetchAt(k);       // आगे के कुछ टुकड़े पहले से
     const c = chunks[i];
-    setStatus('🗣 दोहराइए: ' + c);
+    setStatus('🗣 दोहराइए: ' + c); noteSpoken(c);
     const url = await fetchAt(i);
     if (tok !== S.token) return false;
     let r = url ? await playClip(tok, url, 1) : 'err';
@@ -668,6 +734,10 @@ function judgeEcho(text) {
 // दोहरा ले; सुनकर जाँच नहीं करते (आवाज़ से जाँच धीमी थी और ठीक काम नहीं करती थी), और फिर आगे बढ़ जाते हैं।
 const REPEAT_TIMES = 3;
 async function echoCheck(tok, phrase) {
+  const prevDeaf = S.deaf; S.deaf = true;
+  try { return await echoCheckInner(tok, phrase); } finally { S.deaf = prevDeaf; }
+}
+async function echoCheckInner(tok, phrase) {
   if (!await say(tok, 'यजमान, अब आप मेरे साथ दोहराइए।')) return false;
   const letters = phrase.replace(/[^\u0900-\u097F]/g, '').length;
   const gap = Math.round((1200 + 60 * letters) * (parseFloat($('pauseScale').value) / 1.5));
@@ -721,6 +791,7 @@ async function introRules(tok, p) {
 
 // ---------- पूजा चलाना ----------
 async function run() {
+  clearTimeout(S.autoTimer); S.autoTimer = null;
   const tok = ++S.token; synth.cancel();
   S.phase = 'running'; setStatus('पूजा चल रही है… बीच में रोकने के लिए बोलें या लिखें');
   const p = S.pooja;
@@ -758,6 +829,7 @@ async function run() {
   setStatus('अगली पूजा के लिए नाम बताइए');
 }
 function stopPooja() {
+  clearTimeout(S.autoTimer); S.autoTimer = null;
   interrupt(); S.intro = false; S.phase = 'idle'; S.pooja = null; S.pending = null; stageMode('off'); setStatus('');
 }
 
@@ -777,6 +849,7 @@ function quickCommand(text) {
 async function handleUser(text, image) {
   text = (text || '').trim();
   if (!text && !image) return;
+  clearTimeout(S.autoTimer); S.autoTimer = null;
   const prev = S.phase;
   const wasRunning = prev === 'running' || prev === 'paused';
   interrupt();                       // यजमान ने टोका: तुरंत बोलना बंद
@@ -1006,43 +1079,61 @@ async function handleLibrary(lib, said = '') {
 
 // ---------- आवाज़ से इनपुट (बीच में रोकना और मंत्र दोहराना) ----------
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+function onSpeechResult(e) {
+  const r = e.results[e.results.length - 1], said = r[0].transcript;
+  if (S.ptt && !S.pttDown) return;                 // पुश-टू-टॉक: बटन दबाए बिना कुछ नहीं सुनना
+  if (S.ask) {                                     // हाँ/नहीं की प्रतीक्षा
+    setStatus('सुन रहा हूँ: ' + said);
+    if (!r.isFinal) return;
+    const j = judgeYesNo(said);
+    if (j === 'yes') S.ask.finish('yes'); else if (j === 'no') S.ask.finish('no'); else handleUser(said);
+    return;
+  }
+  if (S.echo) {                                    // मंत्र दोहराने की प्रतीक्षा
+    setStatus('सुन रहा हूँ: ' + said);
+    if (!r.isFinal) return;
+    const j = judgeEcho(said);
+    if (j === 'ok') S.echo.finish('ok');
+    else if (j === 'ask') handleUser(said);        // यह दोहराना नहीं, कोई प्रश्न है
+    else S.echo.finish('miss');
+    return;
+  }
+  const speaking = S.phase === 'running' || synth.speaking || !clip.paused;
+  if (speaking) {                                  // आचार्य जी बोल रहे या पूजा चल रही है: हर आवाज़ पर नहीं रुकना
+    if (bargeGate(said, r) === 'ignore') { if (r.isFinal) speechSince = 0; return; }
+    speechSince = 0;
+    interrupt(); if (S.pooja && S.phase !== 'samagri') S.phase = 'interrupted';
+  }
+  if (S.pooja && S.phase === 'interrupted') scheduleAutoResume();   // शोर थी तो थोड़ी देर में अपने-आप आगे
+  setStatus('सुन रहा हूँ: ' + said);
+  if (r.isFinal) handleUser(said);
+}
 let rec = null, micOn = false, micTemp = false;
 function initMic() {
   if (!SR) { $('mic').disabled = true; $('mic').title = 'इस ब्राउज़र में आवाज़ पहचान नहीं है (Chrome या Edge उपयोग करें)'; return; }
   rec = new SR(); rec.lang = 'hi-IN'; rec.continuous = true; rec.interimResults = true;
-  rec.onresult = (e) => {
-    const r = e.results[e.results.length - 1], said = r[0].transcript;
-    if (S.ask) {                                   // हाँ/नहीं की प्रतीक्षा
-      setStatus('सुन रहा हूँ: ' + said);
-      if (!r.isFinal) return;
-      const j = judgeYesNo(said);
-      if (j === 'yes') S.ask.finish('yes'); else if (j === 'no') S.ask.finish('no'); else handleUser(said);
-      return;
-    }
-    if (S.echo) {                                  // मंत्र दोहराने की प्रतीक्षा
-      setStatus('सुन रहा हूँ: ' + said);
-      if (!r.isFinal) return;
-      const j = judgeEcho(said);
-      if (j === 'ok') S.echo.finish('ok');
-      else if (j === 'ask') handleUser(said);      // यह दोहराना नहीं, कोई प्रश्न है
-      else S.echo.finish('miss');
-      return;
-    }
-    // यजमान ने बोलना शुरू किया: तुरंत शांत हो जाएँ
-    if (S.phase === 'running' || synth.speaking) { interrupt(); if (S.pooja && S.phase !== 'samagri') S.phase = 'interrupted'; }
-    setStatus('सुन रहा हूँ: ' + said);
-    if (r.isFinal) handleUser(said);
-  };
+  rec.onresult = onSpeechResult;
   rec.onend = () => { if (micOn || micTemp) try { rec.start(); } catch {} };
   rec.onerror = (e) => { if (e.error === 'not-allowed') { micOn = micTemp = false; $('mic').classList.remove('on'); setStatus('माइक की अनुमति नहीं मिली।'); } };
 }
 function startTempMic() { if (rec && !micOn) { micTemp = true; try { rec.start(); } catch {} } }
 function stopTempMic() { if (micTemp && !micOn) { micTemp = false; try { rec.stop(); } catch {} } }
 $('mic').onclick = () => {
-  if (!rec) return;
+  if (!rec || S.ptt) return;                        // पुश-टू-टॉक में बटन दबाकर रखना है, चालू-बंद नहीं
   micOn = !micOn; $('mic').classList.toggle('on', micOn);
   if (micOn) { try { rec.start(); } catch {} setStatus('माइक चालू है, बोलिए…'); } else { rec.stop(); setStatus(''); }
 };
+
+$('oPtt').onchange = (e) => {
+  S.ptt = e.target.checked; S.pttDown = false;
+  if (S.ptt) { micOn = micTemp = false; $('mic').classList.remove('on'); try { rec && rec.stop(); } catch (er) {} setStatus('पुश-टू-टॉक चालू: Space या माइक बटन दबाकर रखिए और बोलिए'); }
+  else setStatus('');
+};
+$('mic').addEventListener('pointerdown', () => pttPress());
+['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => $('mic').addEventListener(ev, () => pttRelease()));
+const typing = () => /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+document.addEventListener('keydown', (e) => { if (e.code === 'Space' && S.ptt && !e.repeat && !typing()) { e.preventDefault(); pttPress(); } });
+document.addEventListener('keyup', (e) => { if (e.code === 'Space' && S.ptt && !typing()) { e.preventDefault(); pttRelease(); } });
 
 // ---------- लिखकर और चित्र से इनपुट ----------
 function send() {
@@ -1082,7 +1173,7 @@ $('file').onchange = () => {
 };
 
 // ---------- नियंत्रण बटन ----------
-$('bPause').onclick = () => { interrupt(); if (S.pooja) { S.phase = 'paused'; setStatus('पूजा रुकी है।'); } };
+$('bPause').onclick = () => { clearTimeout(S.autoTimer); S.autoTimer = null; interrupt(); if (S.pooja) { S.phase = 'paused'; setStatus('पूजा रुकी है।'); } };
 $('bResume').onclick = () => { if (S.pooja) run(); };
 $('bRepeat').onclick = () => { if (S.pooja) run(); };
 $('bNext').onclick = () => { if (S.pooja) { S.step = Math.min(S.step + 1, S.pooja.steps.length - 1); run(); } };

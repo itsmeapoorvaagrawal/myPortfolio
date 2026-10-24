@@ -58,3 +58,14 @@ The Lakshmi (Diwali) pooja follows only one supplied PDF ("दीपावली
 - `server.js`: Claude call (API or Agent SDK), system prompt, Hindi-only guard
 - `public/poojas.js`: pooja catalog, shlokas, custom-pooja builder
 - `public/index.html`: UI, voice, pooja runner, echo check, interruption handling
+
+## Noise and echo handling (microphone)
+The page listens through the browser's speech recognizer, so a cough, a bell, a TV or the priest's own voice coming back
+through the speaker could stop the pooja. Settings (top bar):
+- **शोर से बचाव** (on by default): the priest is interrupted only by 2+ words spoken for about half a second, or a full sentence
+  recognised with decent confidence; stop words ("रुकिए", "रुको", "आचार्य जी") always work. What the priest said in the last
+  ~25 s is remembered and anything that matches it (his own echo) is ignored. The mic is ignored while he chants a shloka and
+  while you repeat along (sankalp and repeat-after-me steps).
+- **पुश-टू-टॉक**: the mic listens only while Space (or the mic button) is held. Best for a noisy room or during aarti.
+- After a false stop with no clear command, the pooja resumes by itself in about 4 seconds (`AUTO_RESUME_MS` in `index.html`).
+- Headphones remove echo completely.
