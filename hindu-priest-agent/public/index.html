@@ -660,6 +660,7 @@ async function run() {
       renderStep();
     }
     if (!await say(tok, fill(st.instruction))) return;
+    if (st.instruction && !await wait(tok, 2000)) return;           // निर्देश के बाद 2 सेकंड का ठहराव, फिर श्लोक
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
     if (st.meaning && $('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
     if (st.echo && !await echoCheck(tok, st.echo)) return;
