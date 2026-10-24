@@ -495,7 +495,7 @@ function say(tok, text, kind = 'talk') {
   });
 }
 const wait = (tok, ms) => new Promise((r) => setTimeout(() => r(tok === S.token), ms));
-// यजमान को क्रिया (चढ़ाना, तिलक, जल, आदि) करने का समय: निर्देश के बाद 5 से 10 सेकंड (निर्देश जितना लंबा, उतना समय)।
+// यजमान को क्रिया (चढ़ाना, तिलक, जल, आदि) करने का समय: निर्देश और श्लोक पूरा होने के बाद 5 से 10 सेकंड (निर्देश जितना लंबा, उतना समय)।
 // st.act से किसी चरण का समय सेकंड में तय किया जा सकता है (0 = कोई प्रतीक्षा नहीं)। "✔ हो गया" दबाने पर तुरंत आगे।
 const actSeconds = (st) => {
   const scale = parseFloat($('actScale').value); if (!(scale > 0)) return 0;
@@ -660,11 +660,13 @@ async function run() {
       renderStep();
     }
     if (!await say(tok, fill(st.instruction))) return;
-    if (!await actWait(tok, actSeconds(st))) return;
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
     if (st.meaning && $('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
     if (st.echo && !await echoCheck(tok, st.echo)) return;
-    if (!await wait(tok, st.wait || 3500)) return;
+    // निर्देश और श्लोक पूरा होने के बाद यजमान को क्रिया का समय (5-10 सेकंड); st.wait हो तो उससे कम नहीं
+    const actSecs = Math.max(actSeconds(st), st.wait ? st.wait / 1000 : 0);
+    if (actSecs) { if (!await actWait(tok, actSecs)) return; }
+    else if (!await wait(tok, 3500)) return;
     S.step++;
   }
   S.phase = 'idle'; stageMode('off');
