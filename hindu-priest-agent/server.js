@@ -18,7 +18,10 @@ const TTS = process.env.GOOGLE_TTS_API_KEY
 const ttsEnabled = () => !!(TTS.key && TTS.voice);
 const TTS_DIR = path.join(__dirname, '.tts-cache');
 const ttsInflight = new Map();
-async function ttsFetch(text) {
+// ॐ का चिह्न हॉस्टेड आवाज़ें साफ़ नहीं पढ़तीं; बोलने के लिए "ओम" लिखते हैं (स्क्रीन पर मूल पाठ ही रहता है)
+const spokenText = (t) => t.replace(/ॐ/g, 'ओम');
+async function ttsFetch(rawText) {
+  const text = spokenText(rawText);
   if (TTS.name === 'google') {
     const r = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
       method: 'POST', headers: { 'x-goog-api-key': TTS.key, 'content-type': 'application/json' },
@@ -35,7 +38,7 @@ async function ttsFetch(text) {
   return Buffer.from(await r.arrayBuffer());
 }
 async function ttsAudio(text) {
-  const file = path.join(TTS_DIR, AUDIOKEY.key(TTS.name + '|' + TTS.voice + '|' + TTS.model + '|' + text) + '.mp3');
+  const file = path.join(TTS_DIR, AUDIOKEY.key(TTS.name + '|' + TTS.voice + '|' + TTS.model + '|' + spokenText(text)) + '.mp3');   // बोले जाने वाले रूप पर कुंजी: पुरानी (ॐ वाली) कैश अपने-आप बेकार हो जाती है
   if (fs.existsSync(file)) return fs.readFileSync(file);
   if (!ttsInflight.has(file)) {
     ttsInflight.set(file, (async () => {
