@@ -615,16 +615,21 @@ function judgeEcho(text) {
   if (s >= PASS) return 'ok';
   return looksLikeAsk(text) && s < 0.35 ? 'ask' : 'miss';
 }
+// "मेरे साथ दोहराइए": एक बार कहकर आचार्य जी वही मंत्र REPEAT_TIMES बार बोलते हैं, हर बार के बाद इतना ठहराव कि यजमान साथ-साथ
+// दोहरा ले; सुनकर जाँच नहीं करते (आवाज़ से जाँच धीमी थी और ठीक काम नहीं करती थी), और फिर आगे बढ़ जाते हैं।
+const REPEAT_TIMES = 3;
 async function echoCheck(tok, phrase) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (!await say(tok, attempt === 0 ? 'यजमान, अब आप मेरे पीछे दोहराइए।' : 'कोई बात नहीं, एक बार फिर, धीरे-धीरे दोहराइए।')) return false;
+  if (!await say(tok, 'यजमान, अब आप मेरे साथ दोहराइए।')) return false;
+  const letters = phrase.replace(/[^\u0900-\u097F]/g, '').length;
+  const gap = Math.round((1200 + 60 * letters) * (parseFloat($('pauseScale').value) / 1.5));
+  for (let n = 1; n <= REPEAT_TIMES; n++) {
+    if (tok !== S.token) return false;
+    setStatus(`🗣 साथ दोहराइए (${n}/${REPEAT_TIMES})`);
     if (!await say(tok, phrase, 'sloka')) return false;
-    const r = await listenEcho(phrase, 20000);
-    if (tok !== S.token || r === 'interrupted') return false;
-    if (r === 'ok' || r === 'skip') return tok === S.token;
-    if (attempt === 2) { await say(tok, 'कोई बात नहीं यजमान, भाव ही प्रधान है। आगे बढ़ते हैं।'); return tok === S.token; }
+    if (n < REPEAT_TIMES && !await wait(tok, gap)) return false;
   }
-  return true;
+  setStatus('');
+  return tok === S.token;
 }
 
 // ---------- हाँ/नहीं पूछना (वैकल्पिक पाठ के लिए) ----------
