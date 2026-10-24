@@ -115,6 +115,7 @@
     <label class="opt"><input type="checkbox" id="oEven" checked> रिकॉर्डिंग में ठहराव बराबर करें</label>
     <label>रिकॉर्डिंग-ठहराव: <input id="clipPause" type="range" min="0.5" max="2" step="0.1" value="1"> <b id="clipPauseVal">1×</b></label>
     <label>ठहराव: <input id="pauseScale" type="range" min="0.5" max="3" step="0.25" value="1.5"></label>
+    <label>क्रिया का समय: <input id="actScale" type="range" min="0" max="2" step="0.25" value="1"> <b id="actScaleVal">1×</b></label>
       <label class="opt"><input type="checkbox" id="oRespell" checked> उच्चारण-सुधार</label>
     </div>
   </div>
@@ -142,6 +143,7 @@
       <button id="bPause">⏸ रोकें</button>
       <button id="bResume">▶ आगे बढ़ें</button>
       <button id="bRepeat">↻ दोहराएँ</button>
+      <button id="bDone" class="primary" style="display:none">✔ हो गया</button>
       <button id="bNext">⏭ अगला चरण</button>
       <button id="bStop">⏹ समाप्त</button>
       <label class="opt"><input type="checkbox" id="oMeaning"> अर्थ भी सुनाएँ</label>
@@ -230,6 +232,10 @@ $('oEven').checked = store.get('even', '1') === '1';
 $('oEven').onchange = (e) => store.set('even', e.target.checked ? '1' : '0');
 $('pauseScale').value = store.get('pauseScale', '1.5');
 $('pauseScale').oninput = (e) => store.set('pauseScale', e.target.value);
+$('actScale').value = store.get('actScale', '1');
+const showAct = () => { const v = parseFloat($('actScale').value); $('actScaleVal').textContent = v === 0 ? 'बंद' : v.toFixed(2).replace(/\.?0+$/, '') + '×'; };
+showAct();
+$('actScale').oninput = (e) => { store.set('actScale', e.target.value); showAct(); };
 $('oRespell').checked = store.get('respell', '1') === '1';
 $('oRespell').onchange = (e) => store.set('respell', e.target.checked ? '1' : '0');
 const curVoice = () => hiVoices.find((v) => v.name === $('voiceSel').value) || hiVoices[0] || null;
@@ -489,6 +495,27 @@ function say(tok, text, kind = 'talk') {
   });
 }
 const wait = (tok, ms) => new Promise((r) => setTimeout(() => r(tok === S.token), ms));
+// यजमान को क्रिया (चढ़ाना, तिलक, जल, आदि) करने का समय: निर्देश के बाद 5 से 10 सेकंड (निर्देश जितना लंबा, उतना समय)।
+// st.act से किसी चरण का समय सेकंड में तय किया जा सकता है (0 = कोई प्रतीक्षा नहीं)। "✔ हो गया" दबाने पर तुरंत आगे।
+const actSeconds = (st) => {
+  const scale = parseFloat($('actScale').value); if (!(scale > 0)) return 0;
+  if (typeof st.act === 'number') return Math.round(st.act * scale);
+  const len = (st.instruction || '').length;
+  return Math.round(Math.min(10, Math.max(5, 5 + Math.floor(len / 45))) * scale);
+};
+async function actWait(tok, secs) {
+  if (!secs) return tok === S.token;
+  S.actSkip = false; $('bDone').style.display = '';
+  const end = Date.now() + secs * 1000;
+  try {
+    while (tok === S.token && !S.actSkip && Date.now() < end) {
+      setStatus(`⏳ क्रिया कीजिए… ${Math.ceil((end - Date.now()) / 1000)} सेकंड (हो जाए तो "हो गया" दबाइए)`);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  } finally { $('bDone').style.display = 'none'; S.actSkip = false; setStatus(''); }
+  return tok === S.token;
+}
+$('bDone').onclick = () => { S.actSkip = true; };
 
 function interrupt() { S.token++; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted'); if (typeof japa !== 'undefined' && japa && !japa.paused) stopJapa(); }
 
@@ -633,6 +660,7 @@ async function run() {
       renderStep();
     }
     if (!await say(tok, fill(st.instruction))) return;
+    if (!await actWait(tok, actSeconds(st))) return;
     if (!await say(tok, fill(st.sloka), 'sloka')) return;
     if (st.meaning && $('oMeaning').checked && !await say(tok, 'अर्थ। ' + st.meaning)) return;
     if (st.echo && !await echoCheck(tok, st.echo)) return;
