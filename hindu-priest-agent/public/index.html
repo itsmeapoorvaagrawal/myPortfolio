@@ -424,9 +424,9 @@ async function playHostedLines(tok, text) {
   }
   return 'done';
 }
-function say(tok, text, kind = 'talk') {
+function say(tok, text, kind = 'talk', slow = false) {
   return new Promise(async (resolve) => {
-    const base = parseFloat($('rate').value), pitch = parseFloat($('pitch').value);
+    const base = parseFloat($('rate').value) * (slow ? 0.85 : 1), pitch = parseFloat($('pitch').value);   // slow: कई क्रियाओं वाले निर्देश धीरे
     if (kind === 'sloka') {
       const url = clipFor(text);
       let hostedTried = false, rest0 = null;
@@ -484,7 +484,7 @@ function say(tok, text, kind = 'talk') {
       pending = nextUrl(i + 1);                      // अगला टुकड़ा पहले से बनवाना, ताकि बीच में रुकना न पड़े
       if (tok !== S.token) return resolve(false);
       if (url) {
-        const r = await playClip(tok, url, 1);
+        const r = await playClip(tok, url, slow ? 0.88 : 1);
         if (r !== 'err') { if (!r) return resolve(false); continue; }
         console.warn('हॉस्टेड आवाज़ की ऑडियो फ़ाइल नहीं चली (शायद ब्राउज़र ने आवाज़ रोकी)');
       }
@@ -554,6 +554,16 @@ const actSeconds = (st) => {
   const len = (st.instruction || '').length;
   return Math.round((3 + (len > 60) + (len > 110)) * scale);        // छोटा निर्देश 3 सेकंड, मध्यम 4, लंबा (कई क्रियाएँ) 5
 };
+// निर्देश में कई काम हों (2+ वाक्य या लंबा वाक्य) तो धीरे पढ़ना और हर वाक्य (हर क्रिया) के बाद छोटा ठहराव, ताकि यजमान साथ-साथ कर सके।
+async function sayInstruction(tok, text) {
+  const parts = text.split(/(?<=[।!?])\s*/).map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 2 && text.length <= 90) return say(tok, text);
+  for (let i = 0; i < parts.length; i++) {
+    if (!await say(tok, parts[i], 'talk', true)) return false;
+    if (i < parts.length - 1 && !await wait(tok, Math.round(1200 * (parseFloat($('pauseScale').value) / 1.5)))) return false;
+  }
+  return true;
+}
 async function actWait(tok, secs) {
   if (!secs) return tok === S.token;
   const end = Date.now() + secs * 1000;
@@ -713,7 +723,7 @@ async function run() {
       if (!want) { S.step++; continue; }
       renderStep();
     }
-    if (!await say(tok, fill(st.instruction))) return;
+    if (!await sayInstruction(tok, fill(st.instruction))) return;
     if (st.instruction && !await wait(tok, 2000)) return;           // निर्देश के बाद 2 सेकंड का ठहराव, फिर श्लोक
     if (st.title === 'संकल्प') {                                     // संकल्प: 2-3 शब्दों के टुकड़े, यजमान साथ-साथ दोहराए
       if (!await say(tok, 'अब मैं दो-तीन शब्द बोलता हूँ। आप मेरे साथ-साथ दोहराते जाइए।')) return;
