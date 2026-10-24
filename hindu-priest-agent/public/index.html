@@ -738,7 +738,7 @@ async function run() {
     if (!await sayInstruction(tok, fill(st.instruction))) return;
     if (st.instruction && !await wait(tok, 2000)) return;           // निर्देश के बाद 2 सेकंड का ठहराव, फिर श्लोक
     if (st.title === 'संकल्प') {                                     // संकल्प: 2-3 शब्दों के टुकड़े, यजमान साथ-साथ दोहराए
-      if (!await say(tok, 'अब मैं दो-तीन शब्द बोलता हूँ। आप मेरे साथ-साथ दोहराते जाइए।')) return;
+      if (!await say(tok, 'अब मैं संकल्प बोलूँगा। आप दोहराइए।')) return;
       if (!await wait(tok, 1500)) return;
       if (!await sayWords(tok, fill(st.sloka))) return;
     } else if (!await say(tok, fill(st.sloka), 'sloka')) return;
