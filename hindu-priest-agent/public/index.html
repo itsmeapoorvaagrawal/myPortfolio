@@ -424,7 +424,19 @@ async function playHostedLines(tok, text) {
   }
   return 'done';
 }
+// यजमान का नाम पता हो तो बोलते समय "यजमान" की जगह अधिकतर "नाम जी" (हर तीन में से दो बार); एक बार बोले गए वाक्य में एक ही बार।
+// केवल आचार्य जी की सामान्य बोली में; मंत्र और श्लोक कभी नहीं बदलते। स्क्रीन पर लिखा पाठ वैसा ही रहता है।
+let addrCount = 0;
+function addressYajman(text) {
+  const nm = (S.yajman && S.yajman.name || '').trim();
+  if (!nm) return text;
+  const call = /जी$/.test(nm) ? nm : nm + ' जी';
+  const re = /(^|[\s,।!?])(जी\s+)?यजमान(?![\u0900-\u097F])/;      // "जी यजमान" में पहले से जी है: दो बार "जी" न हो
+  if (!re.test(text) || addrCount++ % 3 === 2) return text;
+  return text.replace(re, (m, pre) => pre + call);
+}
 function say(tok, text, kind = 'talk', slow = false) {
+  if (kind === 'talk') text = addressYajman(text);
   return new Promise(async (resolve) => {
     const base = parseFloat($('rate').value) * (slow ? 0.85 : 1), pitch = parseFloat($('pitch').value);   // slow: कई क्रियाओं वाले निर्देश धीरे
     if (kind === 'sloka') {
