@@ -143,7 +143,6 @@
       <button id="bPause">⏸ रोकें</button>
       <button id="bResume">▶ आगे बढ़ें</button>
       <button id="bRepeat">↻ दोहराएँ</button>
-      <button id="bDone" class="primary" style="display:none">✔ हो गया</button>
       <button id="bNext">⏭ अगला चरण</button>
       <button id="bStop">⏹ समाप्त</button>
       <label class="opt"><input type="checkbox" id="oMeaning"> अर्थ भी सुनाएँ</label>
@@ -548,7 +547,7 @@ async function sayWords(tok, text) {
   return tok === S.token;
 }
 // यजमान को क्रिया (चढ़ाना, तिलक, जल, आदि) करने का समय: निर्देश और श्लोक पूरा होने के बाद 3 से 5 सेकंड (निर्देश जितना लंबा, उतना समय)।
-// st.act से किसी चरण का समय सेकंड में तय किया जा सकता है (0 = कोई प्रतीक्षा नहीं)। "✔ हो गया" दबाने पर तुरंत आगे।
+// st.act से किसी चरण का समय सेकंड में तय किया जा सकता है (0 = कोई प्रतीक्षा नहीं)।
 const actSeconds = (st) => {
   const scale = parseFloat($('actScale').value); if (!(scale > 0)) return 0;
   if (typeof st.act === 'number') return Math.round(st.act * scale);
@@ -557,17 +556,15 @@ const actSeconds = (st) => {
 };
 async function actWait(tok, secs) {
   if (!secs) return tok === S.token;
-  S.actSkip = false; $('bDone').style.display = '';
   const end = Date.now() + secs * 1000;
   try {
-    while (tok === S.token && !S.actSkip && Date.now() < end) {
-      setStatus(`⏳ क्रिया कीजिए… ${Math.ceil((end - Date.now()) / 1000)} सेकंड (हो जाए तो "हो गया" दबाइए)`);
+    while (tok === S.token && Date.now() < end) {
+      setStatus(`⏳ क्रिया कीजिए… ${Math.ceil((end - Date.now()) / 1000)} सेकंड`);
       await new Promise((r) => setTimeout(r, 200));
     }
-  } finally { $('bDone').style.display = 'none'; S.actSkip = false; setStatus(''); }
+  } finally { setStatus(''); }
   return tok === S.token;
 }
-$('bDone').onclick = () => { S.actSkip = true; };
 
 function interrupt() { S.token++; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted'); if (typeof japa !== 'undefined' && japa && !japa.paused) stopJapa(); }
 
