@@ -257,7 +257,7 @@
   try { LKB = typeof module !== 'undefined' && module.exports ? require('./knowledge/lakshmi.js') : root.LAKSHMI_KB; } catch (e) { LKB = null; }
   if (LKB) {
     const i = POOJAS.findIndex((x) => x.id === 'lakshmi');
-    const kbPooja = { id: 'lakshmi', name: LKB.name, icon: '🪷', desc: 'दीपावली पर लक्ष्मी-गणेश पूजन (दिए गए PDF की विधि के अनुसार)', samagri: LKB.samagri.slice(), steps: LKB.steps.map((x) => ({ ...x })), fromKB: true, prep: LKB.prep.slice(), do: [], dont: [], benefit: LKB.benefit };
+    const kbPooja = { id: 'lakshmi', name: LKB.name, icon: '🪷', desc: 'दीपावली पर लक्ष्मी-गणेश पूजन', samagri: LKB.samagri.slice(), steps: LKB.steps.map((x) => ({ ...x })), fromKB: true, prep: LKB.prep.slice(), do: [], dont: [], benefit: LKB.benefit };
     if (i >= 0) POOJAS[i] = kbPooja; else POOJAS.push(kbPooja);
   }
   POOJAS.forEach((p) => {
