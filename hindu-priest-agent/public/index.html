@@ -980,7 +980,7 @@ async function playMantra(it) {
   const tok = ++S.token; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted');
   markPlaying(it.id);
   if (!await say(tok, it.text, 'sloka', false, true)) return;     // शीर्षक नहीं पढ़ना: सीधे मंत्र, रिकॉर्डिंग से
-  if ($('libMeaning').checked && !await say(tok, 'अर्थ। ' + it.meaning)) return;
+  if ($('libMeaning').checked && !await say(tok, 'अर्थ। ' + it.meaning, 'talk', true)) return;     // अर्थ शांत, धीमी गति से
   markPlaying(null);
 }
 // ---------- जप: गिनती या समय के अनुसार बार-बार सुनाना ----------
