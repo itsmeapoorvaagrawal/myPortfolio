@@ -781,7 +781,6 @@ async function introRules(tok, p) {
   const lines = [];
   if (p.benefit) lines.push('इस पूजा का फल है: ' + p.benefit);
   if (p.do && p.do.length) lines.push('ध्यान रखने योग्य: ' + p.do.join(' '));
-  if (p.dont && p.dont.length) lines.push('इनसे बचिए: ' + p.dont.join(' '));
   if (!lines.length) return true;
   $('stInstr').textContent = lines.join('\n');
   stageMode('run'); $('stTitle').textContent = `${p.icon} ${p.name}: आरंभ से पहले`;
