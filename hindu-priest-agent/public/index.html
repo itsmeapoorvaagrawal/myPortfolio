@@ -733,7 +733,7 @@ function judgeEcho(text) {
 }
 // "मेरे साथ दोहराइए": एक बार कहकर आचार्य जी वही मंत्र REPEAT_TIMES बार बोलते हैं, हर बार के बाद इतना ठहराव कि यजमान साथ-साथ
 // दोहरा ले; सुनकर जाँच नहीं करते (आवाज़ से जाँच धीमी थी और ठीक काम नहीं करती थी), और फिर आगे बढ़ जाते हैं।
-const REPEAT_TIMES = 3;
+const REPEAT_TIMES = 5;
 async function echoCheck(tok, phrase) {
   const prevDeaf = S.deaf; S.deaf = true;
   try { return await echoCheckInner(tok, phrase); } finally { S.deaf = prevDeaf; }
