@@ -485,6 +485,7 @@ let addrCount = 0;
 function addressYajman(text) {
   const nm = (S.yajman && S.yajman.name || '').trim();
   if (!nm) return text;
+  if (text.includes(nm)) return text;                                // वाक्य में नाम पहले से है (जैसे "आपका नाम कविश है"): दोबारा नहीं जोड़ना
   const call = /जी$/.test(nm) ? nm : nm + ' जी';
   const re = /(^|[\s,।!?])(जी\s+)?यजमान(?![\u0900-\u097F])/;      // "जी यजमान" में पहले से जी है: दो बार "जी" न हो
   if (!re.test(text) || addrCount++ % 3 === 2) return text;
