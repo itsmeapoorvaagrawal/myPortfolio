@@ -492,20 +492,21 @@ function addressYajman(text) {
   return text.replace(re, (m, pre) => pre + call);
 }
 // आचार्य जी जब श्लोक बोल रहे हों, माइक की आवाज़ें (घंटी, गूँज) अनदेखी रहती हैं; "रुकिए" जैसे शब्द फिर भी सुने जाते हैं।
-async function say(tok, text, kind = 'talk', slow = false) {
+async function say(tok, text, kind = 'talk', slow = false, recFirst = false) {
   if (kind === 'talk') text = addressYajman(text);
   noteSpoken(text);
   const prevDeaf = S.deaf;
   if (kind === 'sloka') S.deaf = true;
-  try { return await sayInner(tok, text, kind, slow); } finally { S.deaf = prevDeaf; }
+  try { return await sayInner(tok, text, kind, slow, recFirst); } finally { S.deaf = prevDeaf; }
 }
-function sayInner(tok, text, kind, slow) {
+// recFirst: श्लोक पहले रिकॉर्डिंग (Aryan) से; हॉस्टेड आवाज़ तभी जब रिकॉर्डिंग न हो (बाईं ओर के मंत्र-संग्रह में)
+function sayInner(tok, text, kind, slow, recFirst) {
   return new Promise(async (resolve) => {
     const base = parseFloat($('rate').value) * (slow ? 0.85 : 1), pitch = parseFloat($('pitch').value);   // slow: कई क्रियाओं वाले निर्देश धीरे
     if (kind === 'sloka') {
       const url = clipFor(text);
       let hostedTried = false, rest0 = null;
-      if (HOSTED_FIRST && ttsOn) {
+      if (HOSTED_FIRST && !recFirst && ttsOn) {
         hostedTried = true;
         const h = await playHostedLines(tok, text);
         if (h === 'done') return resolve(tok === S.token);
@@ -978,8 +979,7 @@ async function playMantra(it) {
   stopJapa();
   const tok = ++S.token; synth.cancel(); if (S.echo) S.echo.finish('interrupted'); if (S.ask) S.ask.finish('interrupted');
   markPlaying(it.id);
-  if (!await say(tok, it.title + '।')) return;
-  if (!await say(tok, it.text, 'sloka')) return;
+  if (!await say(tok, it.text, 'sloka', false, true)) return;     // शीर्षक नहीं पढ़ना: सीधे मंत्र, रिकॉर्डिंग से
   if ($('libMeaning').checked && !await say(tok, 'अर्थ। ' + it.meaning)) return;
   markPlaying(null);
 }
@@ -999,7 +999,7 @@ async function japaLoop() {
   const id = ++japa.loop, tok = ++S.token; synth.cancel(); japa.tok = tok;
   if (japa.endAt === 0 && japa.minutes) japa.endAt = Date.now() + japa.remaining;
   while (japa && japa.loop === id) {
-    if (!await say(tok, japa.it.text, 'sloka')) { if (japa && japa.loop === id && !japa.paused) stopJapa(); return; }
+    if (!await say(tok, japa.it.text, 'sloka', false, true)) { if (japa && japa.loop === id && !japa.paused) stopJapa(); return; }
     japa.count++; japaUpdate();
     if (japaDone()) break;
     if (!await wait(tok, 900)) { if (japa && japa.loop === id && !japa.paused) stopJapa(); return; }
@@ -1019,7 +1019,7 @@ async function startJapa(it, { count, minutes }) {
   const tok = ++S.token; synth.cancel();
   const what = count ? count + ' बार' : minutes + ' मिनट';
   add('acharya', it.title + ': ' + what + ' का जप आरंभ।');
-  if (!await say(tok, it.title + '। ' + what + ' का जप आरंभ करते हैं।')) { if (japa && japa.it === it && japa.count === 0) stopJapa(); return; }
+  if (!await say(tok, what + ' का जप आरंभ करते हैं।')) { if (japa && japa.it === it && japa.count === 0) stopJapa(); return; }
   japaLoop();
 }
 function toggleJapa() {
